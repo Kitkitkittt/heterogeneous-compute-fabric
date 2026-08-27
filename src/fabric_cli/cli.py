@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from fabric_cli.overlay import validate_overlay
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
 
@@ -27,6 +28,13 @@ def _parser() -> argparse.ArgumentParser:
     route.add_argument("--architecture", required=True)
     route.add_argument("--role", action="append", default=[])
     route.add_argument("--format", choices=("human", "json"), default="human")
+
+    overlay = subparsers.add_parser("overlay", help="work with a Private Operations Overlay")
+    overlay_subparsers = overlay.add_subparsers(dest="overlay_command", required=True)
+    overlay_validate = overlay_subparsers.add_parser("validate", help="validate a private overlay")
+    overlay_validate.add_argument("--root", type=Path, default=Path.cwd())
+    overlay_validate.add_argument("--overlay", type=Path, required=True)
+    overlay_validate.add_argument("--format", choices=("human", "json"), default="human")
     return parser
 
 
@@ -49,6 +57,14 @@ def _render_route_human(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _render_overlay_human(payload: dict[str, Any]) -> str:
+    status = "PASS" if payload["ok"] else "FAIL"
+    lines = [f"Private Operations Overlay: {status}"]
+    lines.extend(f"- {node['node_id']}: joined" for node in payload["nodes"])
+    lines.extend(f"- {error}" for error in payload["errors"])
+    return "\n".join(lines)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "validate":
@@ -61,7 +77,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if report.ok else 1
     if args.command == "route":
         try:
-            result = route_task(
+            route_result = route_task(
                 args.root.resolve(),
                 args.repository,
                 args.architecture,
@@ -71,11 +87,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             payload = {"decisions": [], "eligible_nodes": [], "error": str(exc), "ok": False}
             print(json.dumps(payload, sort_keys=True) if args.format == "json" else str(exc))
             return 1
-        payload = result.as_dict()
+        payload = route_result.as_dict()
         print(
             json.dumps(payload, sort_keys=True)
             if args.format == "json"
             else _render_route_human(payload)
         )
-        return 0 if result.ok else 1
+        return 0 if route_result.ok else 1
+    if args.command == "overlay" and args.overlay_command == "validate":
+        try:
+            overlay_result = validate_overlay(args.root.resolve(), args.overlay.resolve())
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            payload = {"errors": [str(exc)], "nodes": [], "ok": False}
+            print(json.dumps(payload, sort_keys=True) if args.format == "json" else str(exc))
+            return 1
+        payload = overlay_result.as_dict()
+        print(
+            json.dumps(payload, sort_keys=True)
+            if args.format == "json"
+            else _render_overlay_human(payload)
+        )
+        return 0 if overlay_result.ok else 1
     raise AssertionError(f"unhandled command: {args.command}")
