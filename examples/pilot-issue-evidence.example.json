@@ -1,5 +1,7 @@
 {
   "branch": "codex/15-bounded-pilot",
+  "assignees": ["accountable-owner"],
+  "blocked_by": [],
   "number": 15,
   "repository": "Kitkitkittt/heterogeneous-compute-fabric",
   "state": "OPEN",

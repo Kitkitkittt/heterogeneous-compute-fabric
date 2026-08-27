@@ -1,13 +1,21 @@
-schema: heterogeneous-compute-fabric/admission-observations-v1
+schema: heterogeneous-compute-fabric/admission-observations-v2
 node_id: compute-01
 role_profile: compute
 os_profile: ubuntu24
+observed_at: REPLACE_WITH_CURRENT_UTC_ISO_TIMESTAMP
+collector: fabric-cli/linux-local-v1
+source_ref: https://github.com/OWNER/REPOSITORY/issues/NUMBER
 checks:
   hardware: {status: unknown, public_evidence: null, private_evidence: null}
   os_profile: {status: unknown, public_evidence: null, private_evidence: null}
   disk: {status: unknown, public_evidence: null, private_evidence: null}
+  disk_encryption_headroom: {status: unknown, public_evidence: null, private_evidence: null}
+  time_sync: {status: unknown, public_evidence: null, private_evidence: null}
+  software_updates: {status: unknown, public_evidence: null, private_evidence: null}
+  firewall: {status: unknown, public_evidence: null, private_evidence: null}
   network_ssh: {status: unknown, public_evidence: null, private_evidence: null}
   git_worktree: {status: unknown, public_evidence: null, private_evidence: null}
+  container_execution: {status: unknown, public_evidence: null, private_evidence: null}
   load_thermals: {status: unknown, public_evidence: null, private_evidence: null}
   cpu_execution: {status: unknown, public_evidence: null, private_evidence: null}
   memory_execution: {status: unknown, public_evidence: null, private_evidence: null}

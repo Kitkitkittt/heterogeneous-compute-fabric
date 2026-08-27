@@ -101,12 +101,13 @@ uv run fabric admission collect \
   --os-profile OS_PROFILE \
   --probe-cwd PATH_TO_ISSUE_WORKTREE \
   --probe-config PATH_TO_PRIVATE_PROBE_CONFIG \
+  --source-ref https://github.com/OWNER/REPOSITORY/issues/NUMBER \
   --output PATH_TO_PRIVATE_OBSERVATIONS
 ```
 
 Review the private observations before evaluation. A probe process returning success is evidence for that named check only; it does not promote adjacent fields. CPU execution, memory execution, and CUDA gates are independent.
 
-The private probe configuration is a minimal, temporary projection of the Private Operations Overlay containing `private_network_target` and `ssh_destination`. Keep it outside the worktree. The automated network gate requires a peer ping plus a successful noninteractive key-only SSH login. For `pop24`, `profile_upgrade_path` is manual-only: review versioned Pop!_OS upgrade and recovery guidance, record its source/date privately, and promote only that observation from `unknown` to `pass`. Never infer it from `/etc/os-release`.
+The private probe configuration is a minimal, temporary projection of the Private Operations Overlay containing `private_network_target`, `ssh_destination`, `disk_encryption_required`, and `minimum_free_gib`. Keep it outside the worktree. The automated network gate requires a peer ping plus a successful noninteractive key-only SSH login. The base suite also requires synchronized time, zero pending package upgrades, an active firewall, root-disk encryption matching the declared policy, sufficient free space, a clean issue-owned linked worktree, and execution of the preloaded `busybox:1.36` image without pulling. For `pop24`, `profile_upgrade_path` is manual-only: review versioned Pop!_OS upgrade and recovery guidance, record its source/date privately, and promote only that observation from `unknown` to `pass`. Never infer it from `/etc/os-release`.
 
 Generate the public-safe report with:
 
@@ -120,5 +121,5 @@ uv run fabric admission report `
   --format json
 ```
 
-Store a `private` view only in the authorized Private Operations Overlay workflow. Never paste it into a public issue. Public evidence containing host, address, user, path, or contact identity is rejected. The evaluator can admit passed Roles independently; update `admission_evidence` and `role_admission_evidence` in the Public Registry only from its public output plus reviewed evidence. Each schedulable node and Role needs `status: verified`, an observation date, and a public-safe source reference.
+Store a `private` view only in the authorized Private Operations Overlay workflow. Never paste it into a public issue. Public evidence containing host, address, user, path, or contact identity is rejected. The evaluator can admit passed Roles independently; update `admission_evidence` and `role_admission_evidence` in the Public Registry only from its public output plus reviewed evidence. Each schedulable node and Role needs `status: verified`, an observation date no more than 24 hours old, a recognized collector identity, and a public-safe GitHub issue or PR source reference. Old v1 bundles and future-dated or stale v2 bundles cannot authorize admission.
 
