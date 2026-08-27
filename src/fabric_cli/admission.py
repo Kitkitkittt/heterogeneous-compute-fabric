@@ -4,6 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from fabric_cli.evidence import (
+    ADMISSION_SCHEMA,
+    AdmissionProvenance,
+    claim_admission_provenance,
+    parse_admission_provenance,
+)
 from fabric_cli.io import load_mapping
 from fabric_cli.safety import contains_private_identity
 
@@ -13,8 +19,13 @@ BASE_CHECKS = (
     "hardware",
     "os_profile",
     "disk",
+    "disk_encryption_headroom",
+    "time_sync",
+    "software_updates",
+    "firewall",
     "network_ssh",
     "git_worktree",
+    "container_execution",
     "load_thermals",
 )
 GPU_CHECKS = (
@@ -88,6 +99,7 @@ class AdmissionReport:
     node_admission: str
     role_admission: dict[str, str]
     observations: tuple[Observation, ...]
+    provenance: AdmissionProvenance
     view: ReportView
 
     @property
@@ -106,6 +118,7 @@ class AdmissionReport:
             "node_id": self.node_id,
             "ok": self.ok,
             "os_profile": self.os_profile,
+            **self.provenance.as_dict(),
             "private_details_included": self.view == "private",
             "role_admission": dict(sorted(self.role_admission.items())),
             "role_profile": self.role_profile,
@@ -159,11 +172,13 @@ def generate_admission_report(
     role_profile: str,
     os_profile: str,
     observations_path: Path,
+    replay_ledger: Path,
     view: ReportView,
 ) -> AdmissionReport:
     document = load_mapping(observations_path, "observations")
-    if document.get("schema") != "heterogeneous-compute-fabric/admission-observations-v1":
+    if document.get("schema") != ADMISSION_SCHEMA:
         raise ValueError("observations have an unsupported schema")
+    provenance = parse_admission_provenance(document)
     if document.get("node_id") != node_id:
         raise ValueError("observation Node Slot does not match --node-id")
     if document.get("role_profile") != role_profile:
@@ -195,12 +210,15 @@ def generate_admission_report(
     else:
         node_admission = "installed"
 
-    return AdmissionReport(
+    report = AdmissionReport(
         node_id,
         role_profile,
         os_profile,
         node_admission,
         role_admission,
         observations,
+        provenance,
         view,
     )
+    claim_admission_provenance(provenance, replay_ledger)
+    return report

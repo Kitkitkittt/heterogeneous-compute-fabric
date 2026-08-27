@@ -1,3 +1,5 @@
-# Copy outside the public repository and replace both values from the Private Operations Overlay.
+# Copy outside the public repository and replace connection values from the Private Operations Overlay.
 private_network_target: REPLACE_WITH_PRIVATE_NETWORK_TARGET
 ssh_destination: REPLACE_WITH_PRIVATE_SSH_DESTINATION
+disk_encryption_required: false
+minimum_free_gib: 50

@@ -352,9 +352,16 @@ def _mermaid_command(root: Path) -> tuple[str, ...] | None:
 def _mermaid_renders(command: tuple[str, ...], source: Path) -> bool:
     with tempfile.TemporaryDirectory(prefix="fabric-mermaid-") as temporary:
         output = Path(temporary) / "rendered.svg"
+        render_command = [*command]
+        puppeteer_config = os.environ.get("FABRIC_MERMAID_PUPPETEER_CONFIG")
+        if puppeteer_config:
+            config_path = Path(puppeteer_config)
+            if not config_path.is_file():
+                return False
+            render_command.extend(("--puppeteerConfigFile", str(config_path)))
         try:
             result = subprocess.run(
-                [*command, "-i", str(source), "-o", str(output), "-b", "transparent"],
+                [*render_command, "-i", str(source), "-o", str(output), "-b", "transparent"],
                 text=True,
                 encoding="utf-8",
                 errors="replace",

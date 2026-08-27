@@ -9,6 +9,13 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from fabric_cli.admission import required_checks
+from fabric_cli.evidence import (
+    ADMISSION_SCHEMA,
+    new_admission_provenance,
+    source_issue_number,
+    source_issue_reference,
+)
+from fabric_cli.issues import IssueVerifier
 
 
 @dataclass(frozen=True)
@@ -19,12 +26,19 @@ class ProbeResult:
 
 
 class ProbeAdapter(Protocol):
+    @property
+    def collector_id(self) -> str: ...
+
     def probe(self, check_name: str) -> ProbeResult: ...
 
 
 @dataclass(frozen=True)
 class FixtureProbeAdapter:
     results: dict[str, Any]
+
+    @property
+    def collector_id(self) -> str:
+        return "fabric-cli/fixture-v1"
 
     @classmethod
     def from_path(cls, path: Path) -> FixtureProbeAdapter:
@@ -78,7 +92,23 @@ PROBE_COMMANDS: dict[str, ProbeCommands] = {
     "git_worktree": (
         ("git", "rev-parse", "--is-inside-work-tree"),
         ("git", "rev-parse", "--git-dir"),
+        ("git", "rev-parse", "--git-common-dir"),
+        ("git", "symbolic-ref", "--short", "HEAD"),
         ("git", "status", "--porcelain"),
+    ),
+    "time_sync": (("timedatectl", "show", "--property=NTPSynchronized", "--value"),),
+    "software_updates": (("apt-get", "--simulate", "upgrade"),),
+    "firewall": (("ufw", "status"),),
+    "container_execution": (
+        (
+            "docker",
+            "run",
+            "--rm",
+            "--pull=never",
+            "busybox:1.36",
+            "echo",
+            "container-smoke-ok",
+        ),
     ),
     "load_thermals": (
         ("python3", "-c", "print('bounded-load-ok' if sum(i*i for i in range(100000)) else '')"),
@@ -133,7 +163,13 @@ class LinuxLocalProbeAdapter:
     cwd: Path
     private_network_target: str
     ssh_destination: str
+    disk_encryption_required: bool
+    minimum_free_bytes: int
     timeout_seconds: int = 30
+
+    @property
+    def collector_id(self) -> str:
+        return "fabric-cli/linux-local-v1"
 
     def probe(self, check_name: str) -> ProbeResult:
         commands = (
@@ -155,7 +191,20 @@ class LinuxLocalProbeAdapter:
                 ("sshd", "-T"),
             )
             if check_name == "network_ssh"
-            else PROBE_COMMANDS.get(check_name)
+            else (
+                (
+                    (
+                        "python3",
+                        "-c",
+                        _disk_policy_script(
+                            self.disk_encryption_required,
+                            self.minimum_free_bytes,
+                        ),
+                    ),
+                )
+                if check_name == "disk_encryption_headroom"
+                else PROBE_COMMANDS.get(check_name)
+            )
         )
         if commands is None:
             return ProbeResult(None, (), "no safe automated probe is defined")
@@ -199,7 +248,39 @@ def _thermal_reading(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and 0 < value < 110
 
 
-def _semantic_pass(check_name: str, outputs: tuple[str, ...], os_profile: str) -> bool:
+def _disk_policy_script(encryption_required: bool, minimum_free_bytes: int) -> str:
+    return "\n".join(
+        (
+            "import json, shutil, subprocess",
+            "source = subprocess.run(['findmnt', '-n', '-o', 'SOURCE', '/'], "
+            "check=True, capture_output=True, text=True).stdout.strip().split('[', 1)[0]",
+            "types = subprocess.run(['lsblk', '-s', '-n', '-o', 'TYPE', source], "
+            "check=True, capture_output=True, text=True).stdout.strip().splitlines()",
+            "encrypted = 'crypt' in types",
+            f"required = {encryption_required!r}",
+            f"minimum = {minimum_free_bytes}",
+            "free = shutil.disk_usage('/').free",
+            "value = {'encrypted': encrypted, 'encryption_required': required, "
+            "'free_bytes': free, 'minimum_free_bytes': minimum, "
+            "'policy_match': encrypted == required and free >= minimum}",
+            "print(json.dumps(value, sort_keys=True))",
+            "raise SystemExit(0 if value['policy_match'] else 1)",
+        )
+    )
+
+
+def _issue_branch_matches_source(branch: str, source_ref: str) -> bool:
+    branch_match = re.fullmatch(r"codex/(\d+)-[a-z0-9][a-z0-9-]*", branch)
+    issue_number = source_issue_number(source_ref)
+    return bool(branch_match and issue_number and int(branch_match.group(1)) == issue_number)
+
+
+def _semantic_pass(
+    check_name: str,
+    outputs: tuple[str, ...],
+    os_profile: str,
+    source_ref: str,
+) -> bool:
     joined = "\n".join(outputs)
     lowered = joined.casefold()
     predicates: dict[str, Callable[[], bool]] = {
@@ -210,6 +291,15 @@ def _semantic_pass(check_name: str, outputs: tuple[str, ...], os_profile: str) -
             and bool((_json_object(outputs[1]) or {}).get("all_healthy"))
             and int((_json_object(outputs[1]) or {}).get("disk_count", 0)) > 0
         ),
+        "disk_encryption_headroom": lambda: bool(
+            len(outputs) == 1
+            and (_json_object(outputs[0]) or {}).get("policy_match") is True
+            and int((_json_object(outputs[0]) or {}).get("free_bytes", 0))
+            >= int((_json_object(outputs[0]) or {}).get("minimum_free_bytes", 1))
+        ),
+        "time_sync": lambda: outputs == ("yes",),
+        "software_updates": lambda: bool(outputs and re.search(r"\b0 upgraded\b", lowered)),
+        "firewall": lambda: "status: active" in lowered,
         "network_ssh": lambda: (
             len(outputs) == 3
             and "pong from" in outputs[0].casefold()
@@ -218,11 +308,14 @@ def _semantic_pass(check_name: str, outputs: tuple[str, ...], os_profile: str) -
             and "passwordauthentication no" in lowered
         ),
         "git_worktree": lambda: (
-            len(outputs) == 3
+            len(outputs) == 5
             and outputs[0] == "true"
             and "/worktrees/" in outputs[1].replace("\\", "/")
-            and outputs[2] == ""
+            and "/worktrees/" not in outputs[2].replace("\\", "/")
+            and _issue_branch_matches_source(outputs[3], source_ref)
+            and outputs[4] == ""
         ),
+        "container_execution": lambda: outputs == ("container-smoke-ok",),
         "load_thermals": lambda: (
             len(outputs) == 2
             and outputs[0] == "bounded-load-ok"
@@ -273,14 +366,33 @@ def collect_observations(
     os_profile: str,
     adapter: ProbeAdapter,
     output_path: Path,
+    source_ref: str,
+    issue_verifier: IssueVerifier,
 ) -> dict[str, Any]:
+    provenance = new_admission_provenance(adapter.collector_id, source_ref)
+    issue_reference = source_issue_reference(source_ref)
+    if issue_reference is None:
+        raise ValueError("admission provenance requires a public-safe GitHub issue source")
+    source_repository, source_issue = issue_reference
     checks: dict[str, Any] = {}
     for check_name in required_checks(role_profile, os_profile):
         result = adapter.probe(check_name)
         if result.returncode is None:
             status = "unknown"
-        elif result.returncode != 0 or not _semantic_pass(check_name, result.outputs, os_profile):
+        elif result.returncode != 0 or not _semantic_pass(
+            check_name,
+            result.outputs,
+            os_profile,
+            source_ref,
+        ):
             status = "fail"
+        elif check_name == "git_worktree":
+            try:
+                authority = issue_verifier.verify(source_issue, result.outputs[3])
+            except ValueError:
+                status = "fail"
+            else:
+                status = "pass" if authority.get("repository") == source_repository else "fail"
         else:
             status = "pass"
         private_evidence = "\n".join((*result.outputs, result.stderr)).strip()
@@ -295,7 +407,8 @@ def collect_observations(
         "node_id": node_id,
         "os_profile": os_profile,
         "role_profile": role_profile,
-        "schema": "heterogeneous-compute-fabric/admission-observations-v1",
+        "schema": ADMISSION_SCHEMA,
+        **provenance.as_dict(),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = output_path.with_suffix(output_path.suffix + ".tmp")

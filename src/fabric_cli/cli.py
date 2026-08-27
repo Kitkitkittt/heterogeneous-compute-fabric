@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 import yaml
 
 from fabric_cli.admission import generate_admission_report
+from fabric_cli.evidence import source_issue_reference
 from fabric_cli.frontier import FileIssueSource, GithubIssueSource, build_frontier
 from fabric_cli.io import load_mapping
 from fabric_cli.issues import FixtureIssueVerifier, GithubIssueVerifier, IssueVerifier
@@ -22,6 +24,21 @@ from fabric_cli.probes import (
 )
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
+
+
+def _current_worktree_root() -> Path:
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=Path.cwd(),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        raise ValueError("admission report must run from an issue worktree")
+    return Path(result.stdout.strip()).resolve()
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -58,6 +75,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     admission_report.add_argument("--os-profile", choices=("ubuntu24", "pop24"), required=True)
     admission_report.add_argument("--observations", type=Path, required=True)
+    admission_report.add_argument("--replay-ledger", type=Path, required=True)
     admission_report.add_argument("--view", choices=("public", "private"), default="public")
     admission_report.add_argument("--format", choices=("human", "json"), default="human")
     admission_collect = admission_subparsers.add_parser(
@@ -72,8 +90,10 @@ def _parser() -> argparse.ArgumentParser:
         "--adapter", choices=("linux-local", "fixture"), default="linux-local"
     )
     admission_collect.add_argument("--probe-results", type=Path)
+    admission_collect.add_argument("--issue-evidence", type=Path)
     admission_collect.add_argument("--probe-config", type=Path)
     admission_collect.add_argument("--probe-cwd", type=Path, default=Path.cwd())
+    admission_collect.add_argument("--source-ref", required=True)
     admission_collect.add_argument("--output", type=Path, required=True)
     admission_collect.add_argument("--format", choices=("human", "json"), default="human")
 
@@ -199,11 +219,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if overlay_result.ok else 1
     if args.command == "admission" and args.admission_command == "report":
         try:
+            replay_ledger = args.replay_ledger.resolve()
+            if replay_ledger.is_relative_to(_current_worktree_root()):
+                raise ValueError("private replay ledger must be outside the current worktree")
             admission_report = generate_admission_report(
                 args.node_id,
                 args.role_profile,
                 args.os_profile,
                 args.observations.resolve(),
+                replay_ledger,
                 args.view,
             )
         except (OSError, ValueError, yaml.YAMLError) as exc:
@@ -224,13 +248,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             if output_path.is_relative_to(probe_cwd):
                 raise ValueError("private observations must be written outside the probed worktree")
             adapter: ProbeAdapter
+            source_issue = source_issue_reference(args.source_ref)
+            if source_issue is None:
+                raise ValueError("--source-ref must identify a public GitHub issue")
             if args.adapter == "fixture":
                 if args.probe_results is None:
                     raise ValueError("--probe-results is required for the fixture adapter")
+                if args.issue_evidence is None:
+                    raise ValueError("--issue-evidence is required for the fixture adapter")
                 adapter = FixtureProbeAdapter.from_path(args.probe_results.resolve())
+                admission_issue_verifier: IssueVerifier = FixtureIssueVerifier.from_path(
+                    args.issue_evidence.resolve()
+                )
             else:
                 if args.probe_results is not None:
                     raise ValueError("--probe-results is valid only with the fixture adapter")
+                if args.issue_evidence is not None:
+                    raise ValueError("--issue-evidence is valid only with the fixture adapter")
                 if args.probe_config is None:
                     raise ValueError("--probe-config is required for the linux-local adapter")
                 probe_config_path = args.probe_config.resolve()
@@ -241,21 +275,38 @@ def main(argv: Sequence[str] | None = None) -> int:
                 probe_config = load_mapping(probe_config_path, "private probe configuration")
                 private_network_target = probe_config.get("private_network_target")
                 ssh_destination = probe_config.get("ssh_destination")
+                disk_encryption_required = probe_config.get("disk_encryption_required")
+                minimum_free_gib = probe_config.get("minimum_free_gib")
                 if not isinstance(private_network_target, str) or not private_network_target:
                     raise ValueError("private probe configuration requires private_network_target")
                 if not isinstance(ssh_destination, str) or not ssh_destination:
                     raise ValueError("private probe configuration requires ssh_destination")
+                if not isinstance(disk_encryption_required, bool):
+                    raise ValueError(
+                        "private probe configuration requires disk_encryption_required"
+                    )
+                if (
+                    not isinstance(minimum_free_gib, int)
+                    or isinstance(minimum_free_gib, bool)
+                    or minimum_free_gib <= 0
+                ):
+                    raise ValueError("private probe configuration requires minimum_free_gib")
                 adapter = LinuxLocalProbeAdapter(
                     probe_cwd,
                     private_network_target,
                     ssh_destination,
+                    disk_encryption_required,
+                    minimum_free_gib * 1024**3,
                 )
+                admission_issue_verifier = GithubIssueVerifier(source_issue[0])
             payload = collect_observations(
                 args.node_id,
                 args.role_profile,
                 args.os_profile,
                 adapter,
                 output_path,
+                args.source_ref,
+                admission_issue_verifier,
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             payload = {"error": str(exc), "ok": False}
