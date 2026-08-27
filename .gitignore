@@ -1,0 +1,18 @@
+# Private operator data never belongs in this public repository.
+private/
+inventory/private.yaml
+
+# Local validation output.
+.validation/
+
+# Python development state.
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+dist/
+build/
+node_modules/
+

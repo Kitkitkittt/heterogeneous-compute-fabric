@@ -1,0 +1,8 @@
+{
+  "architecture": "x86_64",
+  "issue_branch": "codex/15-bounded-pilot",
+  "preferred_node": "compute-01",
+  "repository": "heterogeneous-compute-fabric",
+  "required_roles": ["cpu-build"],
+  "source_commit": "REPLACE_WITH_40_CHARACTER_COMMIT_SHA"
+}

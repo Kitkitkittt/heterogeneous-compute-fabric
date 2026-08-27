@@ -1,0 +1,36 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, Segoe UI, sans-serif", "primaryTextColor": "#0f172a", "lineColor": "#475569"}, "flowchart": {"curve": "basis", "nodeSpacing": 45, "rankSpacing": 65}}}%%
+flowchart TB
+    Human((Human)) --> Issues[(GitHub issues<br/>task + authority)] --> Registry["Public node and repo registries<br/>stable IDs + evidence + gates"]
+    Registry <-. "join by node_id" .-> Private["Private operations overlay<br/>network identity · SSH user · owners<br/>recovery · snapshots · credential refs"]
+
+    subgraph Fabric["Heterogeneous compute fabric"]
+        direction LR
+        Dev["dev-01<br/>8C / 16T · 32 GiB · Radeon 780M<br/>interactive development<br/>INSTALL PENDING"]
+        Compute["compute-01<br/>6C / 12T · 48 GB · RTX 4060 Ti 16 GB<br/>CPU · RAM · CUDA worker<br/>INSTALL PENDING"]
+        Cloud["cloud-01<br/>4 ARM OCPUs · 24 GB<br/>bounded ARM64 worker<br/>VERIFIED · GATED"]
+        Deploy["deploy-01<br/>4C / 4T · 23 GiB · durable storage<br/>services · data · staging<br/>VERIFIED · GATED"]
+    end
+
+    Git[("Git commits<br/>isolated worktrees")]
+    Artifacts[("Immutable artifacts<br/>images · reports · datasets")]
+
+    Registry --> Dev
+    Registry --> Compute
+    Registry --> Cloud
+    Registry --> Deploy
+    Dev <--> Git
+    Compute <--> Git
+    Cloud <--> Git
+    Git --> Artifacts
+    Compute --> Artifacts
+    Cloud --> Artifacts
+    Artifacts --> Deploy
+
+    classDef pending fill:#fff7ed,stroke:#ea580c,color:#7c2d12,stroke-width:2px;
+    classDef gated fill:#fefce8,stroke:#ca8a04,color:#713f12,stroke-width:2px;
+    classDef control fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px;
+    classDef private fill:#f5f3ff,stroke:#7c3aed,color:#4c1d95,stroke-width:2px,stroke-dasharray: 5 4;
+    class Dev,Compute pending;
+    class Cloud,Deploy gated;
+    class Issues,Registry,Git,Artifacts control;
+    class Private private;
