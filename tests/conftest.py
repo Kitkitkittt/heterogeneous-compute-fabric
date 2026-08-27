@@ -125,7 +125,10 @@ repositories:
                             (diagrams / "fabric.png").read_bytes()
                         ).hexdigest(),
                         "source_sha256": hashlib.sha256(
-                            (diagrams / "fabric.mmd").read_bytes()
+                            (diagrams / "fabric.mmd")
+                            .read_bytes()
+                            .replace(b"\r\n", b"\n")
+                            .replace(b"\r", b"\n")
                         ).hexdigest(),
                         "svg_sha256": hashlib.sha256(
                             (diagrams / "fabric.svg").read_bytes()

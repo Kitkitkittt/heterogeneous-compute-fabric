@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -188,3 +190,24 @@ def test_validation_rejects_stale_or_illegible_diagram_outputs(
     assert parse_json_output(result)["checks"][2]["errors"] == [
         "fabric.mmd does not match the render manifest"
     ]
+
+
+def test_diagram_manifest_accepts_equivalent_crlf_checkout(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    write_valid_registry(tmp_path)
+    diagrams = tmp_path / "docs" / "diagrams"
+    diagram = diagrams / "fabric.mmd"
+    manifest_path = diagrams / "render-manifest.json"
+    canonical_source = diagram.read_bytes().replace(b"\r\n", b"\n")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["sources"]["fabric.mmd"]["source_sha256"] = hashlib.sha256(
+        canonical_source
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    diagram.write_bytes(canonical_source.replace(b"\n", b"\r\n"))
+
+    result = run_fabric("validate", "--root", str(tmp_path), "--format", "json")
+
+    assert result.returncode == 0, result.stdout

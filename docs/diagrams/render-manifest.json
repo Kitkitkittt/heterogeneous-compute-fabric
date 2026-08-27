@@ -4,12 +4,12 @@
   "sources": {
     "current-fabric.mmd": {
       "png_sha256": "baef6e0cc72f7138164dfa68902ce1361643c14d4c25f853a6fbca6bd784fedf",
-      "source_sha256": "242f6fc6a5a16179eeb20548837dcc12be14d27d3fa7f1224a3585e802942baf",
+      "source_sha256": "9998c5a4e275c550db4eaead28e0f4927f3072c9c388b7c99384c0929ab97cb7",
       "svg_sha256": "1fe9fb9daf84ed1a2cade56bafea47985961e24bb6a416f3b837c9089d69f8e3"
     },
     "workload-routing.mmd": {
       "png_sha256": "3162129121d4b5f4c17acbacafaab128c298e75058da0f4aa784fc9398b25a4a",
-      "source_sha256": "6f44e80331c537243474dbba7323739a085fcceb632ea7b359284a7a6a4b04fd",
+      "source_sha256": "873c2b38d066b8f3067e0931e1aa1f4a73a409fe4dba88dcdc25407fc53e2839",
       "svg_sha256": "0fc71bf9bdde83da060b638b040185ad84772e29a91773b492e4a1c9ec64a7d7"
     }
   }

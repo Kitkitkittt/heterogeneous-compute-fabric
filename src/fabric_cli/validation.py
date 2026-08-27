@@ -311,14 +311,18 @@ def validate_diagrams(root: Path) -> Check:
 def _manifest_matches(source: Path, value: Any) -> bool:
     if not isinstance(value, dict):
         return False
-    artifacts = {
-        "source_sha256": source,
+    if not source.is_file():
+        return False
+    source_bytes = source.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    if value.get("source_sha256") != hashlib.sha256(source_bytes).hexdigest():
+        return False
+    generated_artifacts = {
         "svg_sha256": source.with_suffix(".svg"),
         "png_sha256": source.with_suffix(".png"),
     }
     return all(
         path.is_file() and value.get(field) == hashlib.sha256(path.read_bytes()).hexdigest()
-        for field, path in artifacts.items()
+        for field, path in generated_artifacts.items()
     )
 
 

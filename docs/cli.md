@@ -23,7 +23,7 @@ An authorized operator may keep a newline-delimited private pattern set outside 
 uv run fabric validate --root . --prohibited-patterns PATH_TO_PRIVATE_PATTERN_FILE
 ```
 
-Matches identify only the public file and category. The private pattern is never repeated. The validator also checks complete Repository Contracts, required hardware evidence, real ISO evidence dates for schedulable nodes and Roles, local links, actual rendering with the pinned Mermaid CLI, source/SVG/PNG manifest hashes, rendered dimensions, and generated text artifacts.
+Matches identify only the public file and category. The private pattern is never repeated. The validator also checks complete Repository Contracts, required hardware evidence, real ISO evidence dates for schedulable nodes and Roles, local links, actual rendering with the pinned Mermaid CLI, source/SVG/PNG manifest hashes, rendered dimensions, and generated text artifacts. Mermaid source hashes use canonical LF line endings so the same commit validates from LF and CRLF Git checkouts; committed SVG and PNG hashes remain exact-byte checks.
 
 ## Route work
 
