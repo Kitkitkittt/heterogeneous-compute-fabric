@@ -47,6 +47,12 @@ Detailed public hardware records:
 5. Route by declared capabilities and architecture. ARM64, x86_64, CUDA, serving, and storage are separate constraints.
 6. Reinstallation and other destructive work requires a `ready-for-human` issue. Post-install verification is a separate `ready-for-agent` issue.
 
+## Agent bootstrap
+
+A fresh node starts with the committed [agent operating contract](AGENTS.md). Cross-node planning, routing, execution, admission, deployment, and handoffs use the repo-local [`fabric-collaboration`](.agents/skills/fabric-collaboration/SKILL.md) skill and the authoritative [collaboration protocol](docs/agents/collaboration.md).
+
+The protocol scales by adding Node Slots and independently mergeable issues—not by sharing a checkout. GitHub carries ownership and blockers, isolated worktrees carry mutable source, immutable commits/artifacts cross nodes, and the Private Operations Overlay carries connection mappings.
+
 ## Next gates
 
 1. Human operator completes [issue #3](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/3): reinstall `compute-01` with Ubuntu 24.04 LTS.

@@ -36,6 +36,17 @@ def write_valid_registry(root: Path) -> None:
     diagrams = root / "docs" / "diagrams"
     inventory.mkdir(parents=True)
     diagrams.mkdir(parents=True)
+    for relative in (
+        "AGENTS.md",
+        ".agents/skills/fabric-collaboration/SKILL.md",
+        "docs/agents/collaboration.md",
+        "docs/agents/domain.md",
+        "docs/agents/issue-tracker.md",
+        "docs/agents/triage-labels.md",
+    ):
+        contract = root / relative
+        contract.parent.mkdir(parents=True, exist_ok=True)
+        contract.write_text("# Test agent contract\n", encoding="utf-8")
 
     (inventory / "nodes.yaml").write_text(
         """\

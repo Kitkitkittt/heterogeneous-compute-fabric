@@ -62,6 +62,14 @@ CHECKOUT_POLICY_FIELDS = {
     "shared_writable_checkout",
     "deployment_input",
 }
+REQUIRED_AGENT_CONTRACTS = (
+    "AGENTS.md",
+    ".agents/skills/fabric-collaboration/SKILL.md",
+    "docs/agents/collaboration.md",
+    "docs/agents/domain.md",
+    "docs/agents/issue-tracker.md",
+    "docs/agents/triage-labels.md",
+)
 
 
 def _walk_evidence(value: Any, location: str, errors: list[str]) -> None:
@@ -242,6 +250,9 @@ def _iter_files(root: Path) -> list[Path]:
 
 def validate_links(root: Path) -> Check:
     errors: list[str] = []
+    for relative in REQUIRED_AGENT_CONTRACTS:
+        if not (root / relative).is_file():
+            errors.append(f"required agent contract is missing: {relative}")
     for markdown in (path for path in _iter_files(root) if path.suffix.lower() == ".md"):
         try:
             text = markdown.read_text(encoding="utf-8")
