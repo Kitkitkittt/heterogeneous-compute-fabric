@@ -15,7 +15,7 @@ The fabric distributes **jobs and artifacts**. It does not combine heterogeneous
 | `cloud-01` | Bounded ARM64 builds, agents, and auxiliary services | OCI A1 Flex, 4 ARM OCPUs, 24 GB, 50 GB-class boot volume | Existing Linux installation | `verified`, gated |
 | `deploy-01` | Persistent services, databases, staging, and storage | Core i5-6300HQ, 23 GiB visible, GTX 960M 2 GB, NVMe + USB SSD/HDD | Existing Ubuntu installation | `verified`, gated |
 
-Admission is fail-closed. A node is not schedulable merely because it boots or answers SSH.
+Admission is fail-closed. A node is not schedulable merely because it boots or answers SSH; routing requires directly verified node, Role, and architecture evidence.
 
 ## Start here
 
@@ -25,6 +25,7 @@ Admission is fail-closed. A node is not schedulable merely because it boots or a
 - [Repository registry](inventory/repositories.yaml)
 - [Reinstall and admission runbook](docs/runbooks/reinstall-and-admit-node.md)
 - [GitHub task routing and node labels](docs/task-routing.md)
+- [Fabric CLI reference](docs/cli.md)
 - [Public/private operations boundary](docs/runbooks/private-operations-overlay.md)
 - [Sanitized audit evidence](docs/audits/2026-08-27-four-node-audit.md)
 - [Linux baseline research](docs/research/linux-baseline-options.md)
@@ -56,3 +57,22 @@ Detailed public hardware records:
 6. Run one bounded Git-to-worker-to-deployment pilot before adding a scheduler or cluster framework.
 
 The current files are sanitized. [Issue #7](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/7) separately tracks the owner-authorized rewrite needed to remove superseded identifiers from previously published Git history.
+
+## Fabric CLI
+
+The repository includes a fail-closed command for agents and operators. Install the locked environments with `uv sync` and `npm ci`, then validate a fresh checkout:
+
+```powershell
+uv run fabric validate --root .
+```
+
+Use `--format json` for automation. An authorized operator may supply a private newline-delimited pattern file with `--prohibited-patterns`; matching values are never repeated in output. Validation also rejects stale diagram renders and incomplete Repository Contracts. The [CLI reference](docs/cli.md) documents routing, overlay, read-only admission collection, frontier, and pilot commands.
+
+Development checks:
+
+```powershell
+uv run pytest
+uv run ruff check src tests
+uv run ruff format --check src tests
+uv run mypy src
+```

@@ -90,3 +90,35 @@ The verification commit must update:
 
 Only then transition `installed -> verified -> schedulable`. A node can remain `verified` with one or more roles gated.
 
+## Machine-readable report handoff
+
+Use the versioned admission-observation contract to separate collection from evaluation. The reusable Role profile (`compute` or `workstation`), OS Profile, and stable Node Slot ID are separate fields, so later slots can reuse the same acceptance contract. The collector changes no configuration, uses no package installation or image pulls, records command output privately, and keeps unavailable probes `unknown`:
+
+```bash
+uv run fabric admission collect \
+  --node-id NODE_SLOT \
+  --role-profile ROLE_PROFILE \
+  --os-profile OS_PROFILE \
+  --probe-cwd PATH_TO_ISSUE_WORKTREE \
+  --probe-config PATH_TO_PRIVATE_PROBE_CONFIG \
+  --output PATH_TO_PRIVATE_OBSERVATIONS
+```
+
+Review the private observations before evaluation. A probe process returning success is evidence for that named check only; it does not promote adjacent fields. CPU execution, memory execution, and CUDA gates are independent.
+
+The private probe configuration is a minimal, temporary projection of the Private Operations Overlay containing `private_network_target` and `ssh_destination`. Keep it outside the worktree. The automated network gate requires a peer ping plus a successful noninteractive key-only SSH login. For `pop24`, `profile_upgrade_path` is manual-only: review versioned Pop!_OS upgrade and recovery guidance, record its source/date privately, and promote only that observation from `unknown` to `pass`. Never infer it from `/etc/os-release`.
+
+Generate the public-safe report with:
+
+```powershell
+uv run fabric admission report `
+  --node-id NODE_SLOT `
+  --role-profile ROLE_PROFILE `
+  --os-profile OS_PROFILE `
+  --observations PATH_TO_OBSERVATIONS `
+  --view public `
+  --format json
+```
+
+Store a `private` view only in the authorized Private Operations Overlay workflow. Never paste it into a public issue. Public evidence containing host, address, user, path, or contact identity is rejected. The evaluator can admit passed Roles independently; update `admission_evidence` and `role_admission_evidence` in the Public Registry only from its public output plus reviewed evidence. Each schedulable node and Role needs `status: verified`, an observation date, and a public-safe source reference.
+
