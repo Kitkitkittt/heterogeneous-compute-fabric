@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,21 @@ from fabric_cli.probes import (
 )
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
+
+
+def _current_worktree_root() -> Path:
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=Path.cwd(),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        raise ValueError("admission report must run from an issue worktree")
+    return Path(result.stdout.strip()).resolve()
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -204,7 +220,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "admission" and args.admission_command == "report":
         try:
             replay_ledger = args.replay_ledger.resolve()
-            if replay_ledger.is_relative_to(Path.cwd().resolve()):
+            if replay_ledger.is_relative_to(_current_worktree_root()):
                 raise ValueError("private replay ledger must be outside the current worktree")
             admission_report = generate_admission_report(
                 args.node_id,

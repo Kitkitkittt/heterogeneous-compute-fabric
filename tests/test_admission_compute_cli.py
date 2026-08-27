@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from conftest import parse_json_output
 
+from fabric_cli.cli import _current_worktree_root
 from fabric_cli.probes import _disk_policy_script, _issue_branch_matches_source
 
 BASE_CHECKS = [
@@ -386,6 +387,15 @@ def test_admission_report_rejects_a_replay_ledger_inside_the_public_worktree(
         "ok": False,
     }
     assert not forbidden_ledger.exists()
+
+
+def test_current_worktree_root_is_not_narrowed_to_the_invocation_directory(
+    monkeypatch: Any,
+) -> None:
+    worktree_root = Path.cwd().resolve()
+    monkeypatch.chdir(worktree_root / "src" / "fabric_cli")
+
+    assert _current_worktree_root() == worktree_root
 
 
 def test_fixture_probe_adapter_collects_private_results_without_printing_them(
