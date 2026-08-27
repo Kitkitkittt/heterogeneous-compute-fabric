@@ -90,3 +90,19 @@ The verification commit must update:
 
 Only then transition `installed -> verified -> schedulable`. A node can remain `verified` with one or more roles gated.
 
+## Machine-readable report handoff
+
+Use the versioned admission-observation contract to separate collection from evaluation. Start from the matching COMPUTE or DEV example, fill only directly observed checks, and leave every unobserved check as `unknown`.
+
+Generate the public-safe report with:
+
+```powershell
+uv run fabric admission report `
+  --profile NODE_SLOT `
+  --observations PATH_TO_OBSERVATIONS `
+  --view public `
+  --format json
+```
+
+Store a `private` view only in the authorized Private Operations Overlay workflow. Never paste it into a public issue. The evaluator can admit passed Roles independently; update the Public Registry only from its public output plus reviewed evidence.
+

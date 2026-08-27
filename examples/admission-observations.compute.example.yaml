@@ -1,0 +1,17 @@
+schema: heterogeneous-compute-fabric/admission-observations-v1
+node_id: compute-01
+os_profile: ubuntu24
+checks:
+  hardware: {status: unknown, public_evidence: null, private_evidence: null}
+  os_profile: {status: unknown, public_evidence: null, private_evidence: null}
+  disk: {status: unknown, public_evidence: null, private_evidence: null}
+  network_ssh: {status: unknown, public_evidence: null, private_evidence: null}
+  git_worktree: {status: unknown, public_evidence: null, private_evidence: null}
+  load_thermals: {status: unknown, public_evidence: null, private_evidence: null}
+  cpu_ram: {status: unknown, public_evidence: null, private_evidence: null}
+  nvidia_identity: {status: unknown, public_evidence: null, private_evidence: null}
+  nvidia_driver: {status: unknown, public_evidence: null, private_evidence: null}
+  host_gpu_smoke: {status: unknown, public_evidence: null, private_evidence: null}
+  container_toolkit: {status: unknown, public_evidence: null, private_evidence: null}
+  gpu_container_smoke: {status: unknown, public_evidence: null, private_evidence: null}
+

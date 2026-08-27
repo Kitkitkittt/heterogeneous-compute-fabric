@@ -25,6 +25,7 @@ Admission is fail-closed. A node is not schedulable merely because it boots or a
 - [Repository registry](inventory/repositories.yaml)
 - [Reinstall and admission runbook](docs/runbooks/reinstall-and-admit-node.md)
 - [GitHub task routing and node labels](docs/task-routing.md)
+- [Fabric CLI reference](docs/cli.md)
 - [Public/private operations boundary](docs/runbooks/private-operations-overlay.md)
 - [Sanitized audit evidence](docs/audits/2026-08-27-four-node-audit.md)
 - [Linux baseline research](docs/research/linux-baseline-options.md)
@@ -65,7 +66,7 @@ The repository includes a fail-closed command for agents and operators. Install 
 uv run fabric validate --root .
 ```
 
-Use `--format json` for automation. An authorized operator may supply a private newline-delimited pattern file with `--prohibited-patterns`; matching values are never repeated in output.
+Use `--format json` for automation. An authorized operator may supply a private newline-delimited pattern file with `--prohibited-patterns`; matching values are never repeated in output. The [CLI reference](docs/cli.md) documents routing, overlay, admission, frontier, and pilot commands.
 
 Development checks:
 
