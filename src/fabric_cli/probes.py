@@ -73,7 +73,7 @@ devices = subprocess.run(
 ).stdout.splitlines()
 disks = [line.split()[0] for line in devices if line.split()[-1] == "disk"]
 results = [
-    subprocess.run(["smartctl", "-H", disk], capture_output=True, text=True)
+    subprocess.run(["sudo", "-n", "smartctl", "-H", disk], capture_output=True, text=True)
     for disk in disks
 ]
 healthy = bool(results) and all(
@@ -98,10 +98,12 @@ PROBE_COMMANDS: dict[str, ProbeCommands] = {
     ),
     "time_sync": (("timedatectl", "show", "--property=NTPSynchronized", "--value"),),
     "software_updates": (("apt-get", "--simulate", "upgrade"),),
-    "firewall": (("ufw", "status"),),
+    "firewall": (("sudo", "-n", "ufw", "status"),),
     "container_execution": (
         (
-            "docker",
+            "sudo",
+            "-n",
+            "/usr/bin/docker",
             "run",
             "--rm",
             "--pull=never",
@@ -130,7 +132,9 @@ PROBE_COMMANDS: dict[str, ProbeCommands] = {
     "container_toolkit": (("nvidia-ctk", "--version"),),
     "gpu_container_smoke": (
         (
-            "docker",
+            "sudo",
+            "-n",
+            "/usr/bin/docker",
             "run",
             "--rm",
             "--pull=never",
@@ -152,7 +156,7 @@ PROBE_COMMANDS: dict[str, ProbeCommands] = {
     "audio": (("pactl", "info"),),
     "usb": (("lsusb",),),
     "editor_toolchain": (("git", "--version"),),
-    "containers": (("docker", "info"),),
+    "containers": (("sudo", "-n", "/usr/bin/docker", "info"),),
     "graphics_smoke": (("glxinfo", "-B"),),
     "secure_boot_policy": (("mokutil", "--sb-state"),),
 }
@@ -188,7 +192,7 @@ class LinuxLocalProbeAdapter:
                     self.ssh_destination,
                     "true",
                 ),
-                ("sshd", "-T"),
+                ("sudo", "-n", "sshd", "-T"),
             )
             if check_name == "network_ssh"
             else (

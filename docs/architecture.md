@@ -56,9 +56,9 @@ An agent needs the public contract to decide **where** work belongs and authoriz
 
 ## Linux baseline
 
-`ubuntu24` is the v1 baseline for `dev-01` and `compute-01`. It minimizes bootstrap branches and follows explicit Docker and NVIDIA support paths.
+`ubuntu24` is the preferred v1 baseline for `dev-01` and `compute-01`. It minimizes bootstrap branches and follows explicit Docker and NVIDIA support paths.
 
-`pop24` is a supported workstation-only exception for `dev-01`. It shares the protocol layer but requires a separate bootstrap and acceptance report. Fedora can interoperate over Tailscale, SSH, Git, and containers, but is experimental for this fabric until it has an owned profile and current vendor-support evidence.
+`pop24` is a supported exception for workstation and compute Role Profiles. It shares the protocol layer but requires profile-specific Secure Boot, upgrade, and recovery evidence. A `pop24` compute node must still pass every NVIDIA host and container gate; Ubuntu-derived packaging is not treated as Ubuntu admission evidence. Fedora can interoperate over Tailscale, SSH, Git, and containers, but is experimental for this fabric until it has an owned profile and current vendor-support evidence.
 
 Mixed distributions do not break communication. They increase operational variance in package management, security defaults, driver packaging, upgrades, and troubleshooting.
 

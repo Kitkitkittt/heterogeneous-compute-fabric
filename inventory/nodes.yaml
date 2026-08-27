@@ -104,8 +104,8 @@ nodes:
         values: [unknown]
         evidence: {status: unknown, lifetime: chassis}
     desired_installation:
-      primary_profile: ubuntu24
-      allowed_profiles: [ubuntu24]
+      primary_profile: pop24
+      allowed_profiles: [ubuntu24, pop24]
       mode: headless-first
       executor: human
     admission_gates:

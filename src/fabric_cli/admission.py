@@ -64,7 +64,7 @@ ROLE_PROFILE_REQUIREMENTS: dict[str, dict[str, tuple[str, ...]]] = {
     },
 }
 ALLOWED_OS_PROFILES: dict[str, tuple[str, ...]] = {
-    "compute": ("ubuntu24",),
+    "compute": ("ubuntu24", "pop24"),
     "workstation": ("ubuntu24", "pop24"),
 }
 POP_PROFILE_CHECKS = ("secure_boot_policy", "profile_upgrade_path")
@@ -136,7 +136,7 @@ def role_requirements(role_profile: str, os_profile: str) -> dict[str, tuple[str
         raise ValueError(f"unknown admission role profile: {role_profile}")
     if os_profile not in ALLOWED_OS_PROFILES[role_profile]:
         raise ValueError("OS Profile is not allowed for the selected Role profile")
-    if role_profile == "workstation" and os_profile == "pop24":
+    if os_profile == "pop24":
         return {role: (*checks, *POP_PROFILE_CHECKS) for role, checks in base_roles.items()}
     return base_roles
 

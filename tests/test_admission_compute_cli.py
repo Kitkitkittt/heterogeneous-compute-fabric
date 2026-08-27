@@ -9,7 +9,12 @@ from uuid import uuid4
 from conftest import parse_json_output
 
 from fabric_cli.cli import _current_worktree_root
-from fabric_cli.probes import _disk_policy_script, _issue_branch_matches_source
+from fabric_cli.probes import (
+    DISK_HEALTH_SCRIPT,
+    PROBE_COMMANDS,
+    _disk_policy_script,
+    _issue_branch_matches_source,
+)
 
 BASE_CHECKS = [
     "hardware",
@@ -33,6 +38,18 @@ COMPUTE_CHECKS = [
     "container_toolkit",
     "gpu_container_smoke",
 ]
+
+
+def test_privileged_read_only_probes_use_noninteractive_sudo() -> None:
+    assert '["sudo", "-n", "smartctl", "-H", disk]' in DISK_HEALTH_SCRIPT
+    assert PROBE_COMMANDS["firewall"] == (("sudo", "-n", "ufw", "status"),)
+    assert PROBE_COMMANDS["container_execution"][0][:4] == (
+        "sudo",
+        "-n",
+        "/usr/bin/docker",
+        "run",
+    )
+    assert PROBE_COMMANDS["containers"] == (("sudo", "-n", "/usr/bin/docker", "info"),)
 
 
 def test_worktree_source_and_encryption_probes_fail_closed() -> None:
@@ -151,6 +168,52 @@ def test_compute_report_scales_to_a_new_slot_and_gates_cpu_ram_and_cuda_independ
     assert payload["unknown_checks"] == ["gpu_container_smoke"]
     assert payload["private_details_included"] is False
     assert private_value not in result.stdout
+
+
+def test_pop_compute_report_requires_pop_profile_gates(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    observations = tmp_path / "compute-observations.json"
+    _write_compute_observations(observations, node_id="compute-01")
+    document = json.loads(observations.read_text(encoding="utf-8"))
+    document["os_profile"] = "pop24"
+    document["checks"]["secure_boot_policy"] = {
+        "status": "pass",
+        "public_evidence": "secure_boot_policy passed",
+        "private_evidence": "reviewed privately",
+    }
+    document["checks"]["profile_upgrade_path"] = {
+        "status": "unknown",
+        "public_evidence": "profile_upgrade_path unknown",
+        "private_evidence": None,
+    }
+    observations.write_text(json.dumps(document), encoding="utf-8")
+
+    result = run_fabric(
+        "admission",
+        "report",
+        "--node-id",
+        "compute-01",
+        "--role-profile",
+        "compute",
+        "--os-profile",
+        "pop24",
+        "--observations",
+        str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
+        "--view",
+        "public",
+        "--format",
+        "json",
+    )
+
+    assert result.returncode == 1, result.stderr
+    payload = parse_json_output(result)
+    assert payload["node_admission"] == "verified"
+    assert payload["unknown_checks"] == ["profile_upgrade_path", "gpu_container_smoke"]
+    assert all(state == "installed" for state in payload["role_admission"].values())
 
 
 def test_private_compute_report_requires_an_explicit_view(

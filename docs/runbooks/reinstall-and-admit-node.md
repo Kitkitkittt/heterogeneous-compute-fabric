@@ -65,7 +65,7 @@ In addition to base verification:
 - record driver, CUDA compatibility, toolkit, and test-image versions;
 - verify CPU/RAM work independently of CUDA.
 
-Do not admit the `cuda` role merely because the GPU appears in PCI inventory.
+Do not admit the `cuda` role merely because the GPU appears in PCI inventory. If `pop24` is selected for a compute Role Profile, retain every NVIDIA gate and additionally verify the profile-specific Secure Boot and upgrade/recovery policy.
 
 ## `dev-01` workstation gates
 

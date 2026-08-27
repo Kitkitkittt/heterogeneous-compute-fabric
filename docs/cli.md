@@ -66,7 +66,7 @@ The private probe configuration supplies a peer target, SSH destination, expecte
 
 Admission observations use the fail-closed v2 schema. Collection records a one-time UUID, the UTC observation time, the adapter identity, and the public GitHub issue supplied by `--source-ref`. The issue number must match the issue-owned `codex/<issue>-...` worktree branch. Evaluation rejects v1 bundles, missing or malformed provenance, observations older than 24 hours, any future timestamp, private identities, and non-issue source references.
 
-`profile_upgrade_path` is intentionally manual-only for `pop24`; the collector emits `unknown`. Before evaluation, a human reviews the versioned Pop!_OS upgrade/recovery guidance, records the reviewed source and date in `private_evidence`, and changes only that check to `pass`. Without that handoff every Pop!_OS workstation Role stays gated.
+`profile_upgrade_path` is intentionally manual-only for `pop24`; the collector emits `unknown`. Before evaluation, a human reviews the versioned Pop!_OS upgrade/recovery guidance, records the reviewed source and date in `private_evidence`, and changes only that check to `pass`. Without that handoff every Pop!_OS Role stays gated.
 
 ## Generate an admission report
 

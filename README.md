@@ -11,7 +11,7 @@ The fabric distributes **jobs and artifacts**. It does not combine heterogeneous
 | Stable node ID | Purpose | Durable capacity | OS policy | Admission state |
 | --- | --- | --- | --- | --- |
 | `dev-01` | Interactive development and control | Ryzen 7 7840S, 32 GiB, Radeon 780M, 1 TB NVMe | Ubuntu 24.04 LTS; Pop!_OS 24.04 is a supported workstation exception | `install_pending` |
-| `compute-01` | CPU/RAM builds, CUDA, inference, batch work | Core i5-12400F, 48 GB, RTX 4060 Ti 16 GB, 500 GB SSD + 2 TB disk | Ubuntu 24.04 LTS, headless-first | `install_pending` |
+| `compute-01` | CPU/RAM builds, CUDA, inference, batch work | Core i5-12400F, 48 GB, RTX 4060 Ti 16 GB, 500 GB SSD + 2 TB disk | Ubuntu 24.04 preferred; Pop!_OS 24.04 is an explicit compute exception | `install_pending` |
 | `cloud-01` | Bounded ARM64 builds, agents, and auxiliary services | OCI A1 Flex, 4 ARM OCPUs, 24 GB, 50 GB-class boot volume | Existing Linux installation | `verified`, gated |
 | `deploy-01` | Persistent services, databases, staging, and storage | Core i5-6300HQ, 23 GiB visible, GTX 960M 2 GB, NVMe + USB SSD/HDD | Existing Ubuntu installation | `verified`, gated |
 

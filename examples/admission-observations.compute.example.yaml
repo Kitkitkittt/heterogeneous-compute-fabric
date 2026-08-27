@@ -25,3 +25,6 @@ checks:
   host_gpu_smoke: {status: unknown, public_evidence: null, private_evidence: null}
   container_toolkit: {status: unknown, public_evidence: null, private_evidence: null}
   gpu_container_smoke: {status: unknown, public_evidence: null, private_evidence: null}
+# A pop24 observation bundle must additionally include:
+#   secure_boot_policy: {status: unknown, public_evidence: null, private_evidence: null}
+#   profile_upgrade_path: {status: unknown, public_evidence: null, private_evidence: null}
