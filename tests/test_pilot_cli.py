@@ -75,6 +75,8 @@ def _write_pilot_inputs(tmp_path: Path) -> dict[str, Path]:
         json.dumps(
             {
                 "branch": "codex/15-bounded-pilot",
+                "assignees": ["owner"],
+                "blocked_by": [],
                 "number": 15,
                 "repository": "owner/repository",
                 "state": "OPEN",
@@ -338,3 +340,49 @@ def test_pilot_rejects_closed_issue_evidence(
         "ok": False,
     }
     assert not receipt.exists()
+
+
+def test_pilot_rejects_unassigned_or_blocked_issue_evidence(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    for field, value in (("assignees", []), ("blocked_by", [9])):
+        case_root = tmp_path / field
+        inputs = _write_pilot_inputs(case_root)
+        issue = json.loads(inputs["issue"].read_text(encoding="utf-8"))
+        issue[field] = value
+        inputs["issue"].write_text(json.dumps(issue), encoding="utf-8")
+        receipt = case_root / "receipt.json"
+
+        result = run_fabric(
+            "pilot",
+            "--root",
+            str(case_root),
+            "--request",
+            str(inputs["request"]),
+            "--issue-evidence",
+            str(inputs["issue"]),
+            "--worktree",
+            str(inputs["worktree"]),
+            "--artifact",
+            str(inputs["artifact"]),
+            "--review-evidence",
+            str(inputs["review"]),
+            "--test-evidence",
+            str(inputs["tests"]),
+            "--health-evidence",
+            str(inputs["health"]),
+            "--rollback-evidence",
+            str(inputs["rollback"]),
+            "--receipt",
+            str(receipt),
+            "--deployment-authorized",
+            "--format",
+            "json",
+        )
+
+        assert result.returncode == 1
+        assert json.loads(result.stdout)["error"] == (
+            "issue evidence does not verify the issue-owned branch"
+        )
+        assert not receipt.exists()

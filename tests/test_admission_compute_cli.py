@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -10,8 +11,13 @@ BASE_CHECKS = [
     "hardware",
     "os_profile",
     "disk",
+    "disk_encryption_headroom",
+    "time_sync",
+    "software_updates",
+    "firewall",
     "network_ssh",
     "git_worktree",
+    "container_execution",
     "load_thermals",
 ]
 COMPUTE_CHECKS = [
@@ -40,10 +46,13 @@ def _write_compute_observations(path: Path, node_id: str = "compute-02") -> str:
     path.write_text(
         json.dumps(
             {
-                "schema": "heterogeneous-compute-fabric/admission-observations-v1",
+                "schema": "heterogeneous-compute-fabric/admission-observations-v2",
                 "node_id": node_id,
                 "role_profile": "compute",
                 "os_profile": "ubuntu24",
+                "observed_at": datetime.now(UTC).isoformat(),
+                "collector": "fabric-cli/fixture-v1",
+                "source_ref": "https://github.com/owner/repository/issues/12",
                 "checks": checks,
             }
         ),
@@ -197,6 +206,65 @@ def test_public_report_uses_controlled_summaries_instead_of_caller_text(
     assert hardware["public_evidence"] == "hardware check pass"
 
 
+def test_admission_report_rejects_missing_stale_future_or_private_provenance(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    observations = tmp_path / "compute-observations.json"
+    mutations = (
+        (
+            "v1",
+            lambda document: document.__setitem__(
+                "schema", "heterogeneous-compute-fabric/admission-observations-v1"
+            ),
+        ),
+        ("missing", lambda document: document.pop("observed_at")),
+        ("collector", lambda document: document.__setitem__("collector", "not valid")),
+        (
+            "stale",
+            lambda document: document.__setitem__(
+                "observed_at", (datetime.now(UTC) - timedelta(hours=25)).isoformat()
+            ),
+        ),
+        (
+            "future",
+            lambda document: document.__setitem__(
+                "observed_at", (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+            ),
+        ),
+        (
+            "private",
+            lambda document: document.__setitem__(
+                "source_ref",
+                "https://example.invalid/private/operator" + "@" + "example.com",
+            ),
+        ),
+    )
+
+    for name, mutate in mutations:
+        _write_compute_observations(observations)
+        document = json.loads(observations.read_text(encoding="utf-8"))
+        mutate(document)
+        observations.write_text(json.dumps(document), encoding="utf-8")
+        result = run_fabric(
+            "admission",
+            "report",
+            "--node-id",
+            "compute-02",
+            "--role-profile",
+            "compute",
+            "--os-profile",
+            "ubuntu24",
+            "--observations",
+            str(observations),
+            "--format",
+            "json",
+        )
+
+        assert result.returncode == 1, name
+        assert json.loads(result.stdout)["ok"] is False
+
+
 def test_fixture_probe_adapter_collects_private_results_without_printing_them(
     tmp_path: Path,
     run_fabric: Any,
@@ -210,12 +278,27 @@ def test_fixture_probe_adapter_collects_private_results_without_printing_them(
             '{"blockdevices":[{"name":"disk"}]}',
             '{"all_healthy":true,"disk_count":1}',
         ],
+        "disk_encryption_headroom": [
+            '{"encrypted":false,"encryption_required":false,'
+            '"free_bytes":107374182400,"minimum_free_bytes":53687091200,'
+            '"policy_match":true}'
+        ],
+        "time_sync": ["yes"],
+        "software_updates": ["0 upgraded, 0 newly installed, 0 to remove"],
+        "firewall": ["Status: active"],
         "network_ssh": [
             "pong from private peer",
             "",
             "pubkeyauthentication yes\npasswordauthentication no",
         ],
-        "git_worktree": ["true", "/repo/.git/worktrees/issue", ""],
+        "git_worktree": [
+            "true",
+            "/repo/.git/worktrees/issue",
+            "/repo/.git",
+            "codex/12-compute-admission",
+            "",
+        ],
+        "container_execution": ["container-smoke-ok"],
         "load_thermals": ["bounded-load-ok", '{"temp1_input":42.0}'],
         "cpu_execution": ["333328333350000"],
         "memory_execution": ["16777216"],
@@ -253,6 +336,8 @@ def test_fixture_probe_adapter_collects_private_results_without_printing_them(
         "fixture",
         "--probe-results",
         str(probe_results),
+        "--source-ref",
+        "https://github.com/owner/repository/issues/12",
         "--output",
         str(output),
         "--format",
@@ -271,6 +356,9 @@ def test_fixture_probe_adapter_collects_private_results_without_printing_them(
     collected = json.loads(output.read_text(encoding="utf-8"))
     assert collected["checks"]["hardware"]["status"] == "pass"
     assert secret_detail in collected["checks"]["hardware"]["private_evidence"]
+    assert collected["collector"] == "fabric-cli/fixture-v1"
+    assert collected["source_ref"] == "https://github.com/owner/repository/issues/12"
+    assert collected["observed_at"].endswith("+00:00")
 
 
 def test_zero_exit_docker_info_does_not_pass_the_gpu_container_smoke(
@@ -305,6 +393,8 @@ def test_zero_exit_docker_info_does_not_pass_the_gpu_container_smoke(
         "fixture",
         "--probe-results",
         str(probe_results),
+        "--source-ref",
+        "https://github.com/owner/repository/issues/12",
         "--output",
         str(output),
         "--format",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,10 +42,13 @@ def _write_dev_observations(path: Path, os_profile: str, include_pop_gate: bool)
     path.write_text(
         json.dumps(
             {
-                "schema": "heterogeneous-compute-fabric/admission-observations-v1",
+                "schema": "heterogeneous-compute-fabric/admission-observations-v2",
                 "node_id": "dev-01",
                 "role_profile": "workstation",
                 "os_profile": os_profile,
+                "observed_at": datetime.now(UTC).isoformat(),
+                "collector": "fabric-cli/fixture-v1",
+                "source_ref": "https://github.com/owner/repository/issues/13",
                 "checks": checks,
             }
         ),

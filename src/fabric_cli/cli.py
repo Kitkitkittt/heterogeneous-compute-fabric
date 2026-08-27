@@ -74,6 +74,7 @@ def _parser() -> argparse.ArgumentParser:
     admission_collect.add_argument("--probe-results", type=Path)
     admission_collect.add_argument("--probe-config", type=Path)
     admission_collect.add_argument("--probe-cwd", type=Path, default=Path.cwd())
+    admission_collect.add_argument("--source-ref", required=True)
     admission_collect.add_argument("--output", type=Path, required=True)
     admission_collect.add_argument("--format", choices=("human", "json"), default="human")
 
@@ -241,14 +242,28 @@ def main(argv: Sequence[str] | None = None) -> int:
                 probe_config = load_mapping(probe_config_path, "private probe configuration")
                 private_network_target = probe_config.get("private_network_target")
                 ssh_destination = probe_config.get("ssh_destination")
+                disk_encryption_required = probe_config.get("disk_encryption_required")
+                minimum_free_gib = probe_config.get("minimum_free_gib")
                 if not isinstance(private_network_target, str) or not private_network_target:
                     raise ValueError("private probe configuration requires private_network_target")
                 if not isinstance(ssh_destination, str) or not ssh_destination:
                     raise ValueError("private probe configuration requires ssh_destination")
+                if not isinstance(disk_encryption_required, bool):
+                    raise ValueError(
+                        "private probe configuration requires disk_encryption_required"
+                    )
+                if (
+                    not isinstance(minimum_free_gib, int)
+                    or isinstance(minimum_free_gib, bool)
+                    or minimum_free_gib <= 0
+                ):
+                    raise ValueError("private probe configuration requires minimum_free_gib")
                 adapter = LinuxLocalProbeAdapter(
                     probe_cwd,
                     private_network_target,
                     ssh_destination,
+                    disk_encryption_required,
+                    minimum_free_gib * 1024**3,
                 )
             payload = collect_observations(
                 args.node_id,
@@ -256,6 +271,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.os_profile,
                 adapter,
                 output_path,
+                args.source_ref,
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             payload = {"error": str(exc), "ok": False}
