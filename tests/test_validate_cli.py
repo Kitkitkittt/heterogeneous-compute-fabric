@@ -82,6 +82,21 @@ def test_validation_reports_registry_and_link_contract_failures(
     assert payload["checks"][1]["errors"] == ["README.md has a missing link target"]
 
 
+def test_validation_requires_repository_agent_contracts(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    write_valid_registry(tmp_path)
+    (tmp_path / ".agents" / "skills" / "fabric-collaboration" / "SKILL.md").unlink()
+
+    result = run_fabric("validate", "--root", str(tmp_path), "--format", "json")
+
+    assert result.returncode == 1
+    assert parse_json_output(result)["checks"][1]["errors"] == [
+        "required agent contract is missing: .agents/skills/fabric-collaboration/SKILL.md"
+    ]
+
+
 def test_validation_rejects_schedulable_roles_without_direct_admission_evidence(
     tmp_path: Path,
     run_fabric: Any,
