@@ -56,3 +56,22 @@ Detailed public hardware records:
 6. Run one bounded Git-to-worker-to-deployment pilot before adding a scheduler or cluster framework.
 
 The current files are sanitized. [Issue #7](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/7) separately tracks the owner-authorized rewrite needed to remove superseded identifiers from previously published Git history.
+
+## Fabric CLI
+
+The repository includes a fail-closed command for agents and operators. Install the locked development environment with `uv sync`, then validate a fresh checkout:
+
+```powershell
+uv run fabric validate --root .
+```
+
+Use `--format json` for automation. An authorized operator may supply a private newline-delimited pattern file with `--prohibited-patterns`; matching values are never repeated in output.
+
+Development checks:
+
+```powershell
+uv run pytest
+uv run ruff check src tests
+uv run ruff format --check src tests
+uv run mypy src
+```

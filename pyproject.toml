@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "heterogeneous-compute-fabric"
+version = "0.1.0"
+description = "Fail-closed validation and routing for a heterogeneous compute fabric"
+requires-python = ">=3.12"
+dependencies = [
+  "PyYAML>=6.0.2,<7",
+]
+
+[project.scripts]
+fabric = "fabric_cli.cli:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.15,<2",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+  "types-PyYAML>=6.0.12,<7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fabric_cli"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["fabric_cli"]
+
