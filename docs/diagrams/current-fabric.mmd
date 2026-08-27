@@ -1,0 +1,31 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","fontFamily":"Arial, sans-serif","lineColor":"#475569"}}}%%
+flowchart LR
+  Cloud["Cloud frontier models<br/>hard reasoning and large context"]
+  GitHub[("GitHub<br/>source coordination")]
+
+  subgraph Fabric["Personal compute fabric - current audited state"]
+    Dev["DEV / CONTROL<br/>KeithVo<br/>8C/16T + 32 GB + Radeon 780M<br/>STATUS: usable, constrained"]
+    Compute["COMPUTE / GPU<br/>desktop-x2w7f<br/>prior: 6C/12T + 48 GB + RTX 4060 Ti 16 GB<br/>STATUS: SSH audit blocked"]
+    Deploy["DEPLOY / DATA<br/>vphk2001-GE62-6QC<br/>4C/4T + 23 GiB + storage<br/>STATUS: serving, CPU overloaded"]
+    Data[("Persistent data and artifacts<br/>NVMe + USB SSD + USB HDD")]
+  end
+
+  User(("Human")) --> Dev
+  Dev <--> Cloud
+  Dev <--> GitHub
+  Compute <-.->|"Git branches and worktrees"| GitHub
+  Deploy <-.->|"immutable commit or image"| GitHub
+  Dev -.->|"Tailscale relay works<br/>SSH port 22 blocked"| Compute
+  Dev -->|"Tailscale + SSH verified"| Deploy
+  Compute -.->|"build, test, model, artifact<br/>not yet end-to-end verified"| Deploy
+  Deploy --- Data
+
+  classDef good fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px
+  classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px
+  classDef blocked fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px
+  classDef external fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e
+  class Dev warn
+  class Compute blocked
+  class Deploy blocked
+  class Cloud,GitHub external
+  class Data good

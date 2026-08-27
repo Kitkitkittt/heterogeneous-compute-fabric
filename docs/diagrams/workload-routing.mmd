@@ -1,0 +1,30 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","fontFamily":"Arial, sans-serif","lineColor":"#475569"}}}%%
+flowchart LR
+  Start(["New task"]) --> Classify{"Classify workload"}
+
+  Classify -->|"interactive"| Dev["DEV<br/>plan, edit, browse,<br/>short tests"]
+  Classify -->|"CPU / RAM"| ComputeGate{"COMPUTE gate<br/>identity + SSH + load + RAM<br/>thermals + worktree"}
+  Classify -->|"CUDA / local model"| ComputeGate
+  Classify -->|"persistent service / data"| DeployGate{"DEPLOY gate<br/>load + owners + disk<br/>service health"}
+
+  ComputeGate -->|"pass"| CPULane["CPU / RAM lane<br/>light coding, builds,<br/>tests, batch work"]
+  ComputeGate -->|"pass + GPU free"| GPULane["GPU lane<br/>one exclusive job<br/>initially"]
+  ComputeGate -->|"blocked now"| Queue["Queue or use<br/>cloud capacity"]
+
+  DeployGate -->|"pass"| Deploy["DEPLOY<br/>service, database,<br/>storage, staged release"]
+  DeployGate -->|"heavy compute now"| Queue
+
+  Dev --> Result["Git commit, test result,<br/>or immutable artifact"]
+  CPULane --> Result
+  GPULane --> Result
+  Deploy --> Result
+  Queue -.-> Result
+
+  classDef good fill:#dcfce7,stroke:#15803d,color:#14532d
+  classDef warn fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef blocked fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  classDef decision fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e
+  class Dev,Result good
+  class CPULane,GPULane,Deploy warn
+  class Queue blocked
+  class Classify,ComputeGate,DeployGate decision
