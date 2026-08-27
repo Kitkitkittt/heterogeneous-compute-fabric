@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from fabric_cli.admission import generate_admission_report
 from fabric_cli.overlay import validate_overlay
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
@@ -35,6 +36,16 @@ def _parser() -> argparse.ArgumentParser:
     overlay_validate.add_argument("--root", type=Path, default=Path.cwd())
     overlay_validate.add_argument("--overlay", type=Path, required=True)
     overlay_validate.add_argument("--format", choices=("human", "json"), default="human")
+
+    admission = subparsers.add_parser("admission", help="evaluate Node Slot admission evidence")
+    admission_subparsers = admission.add_subparsers(dest="admission_command", required=True)
+    admission_report = admission_subparsers.add_parser(
+        "report", help="generate an admission report"
+    )
+    admission_report.add_argument("--profile", required=True)
+    admission_report.add_argument("--observations", type=Path, required=True)
+    admission_report.add_argument("--view", choices=("public", "private"), default="public")
+    admission_report.add_argument("--format", choices=("human", "json"), default="human")
     return parser
 
 
@@ -62,6 +73,12 @@ def _render_overlay_human(payload: dict[str, Any]) -> str:
     lines = [f"Private Operations Overlay: {status}"]
     lines.extend(f"- {node['node_id']}: joined" for node in payload["nodes"])
     lines.extend(f"- {error}" for error in payload["errors"])
+    return "\n".join(lines)
+
+
+def _render_admission_human(payload: dict[str, Any]) -> str:
+    lines = [f"{payload['node_id']} admission: {payload['node_admission']}"]
+    lines.extend(f"- {role}: {state}" for role, state in payload["role_admission"].items())
     return "\n".join(lines)
 
 
@@ -108,4 +125,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             else _render_overlay_human(payload)
         )
         return 0 if overlay_result.ok else 1
+    if args.command == "admission" and args.admission_command == "report":
+        try:
+            admission_report = generate_admission_report(
+                args.profile,
+                args.observations.resolve(),
+                args.view,
+            )
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            payload = {"error": str(exc), "ok": False}
+            print(json.dumps(payload, sort_keys=True) if args.format == "json" else str(exc))
+            return 1
+        payload = admission_report.as_dict()
+        print(
+            json.dumps(payload, sort_keys=True)
+            if args.format == "json"
+            else _render_admission_human(payload)
+        )
+        return 0 if admission_report.ok else 1
     raise AssertionError(f"unhandled command: {args.command}")
