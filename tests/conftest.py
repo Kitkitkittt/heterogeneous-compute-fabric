@@ -47,6 +47,7 @@ nodes:
   - node_id: compute-01
     admission_state: schedulable
     roles: [cpu-build]
+    role_admission: {cpu-build: schedulable}
     task_label: node:compute-01
     hardware:
       cpu:
@@ -74,6 +75,14 @@ repositories:
     (diagrams / "fabric.mmd").write_text("flowchart LR\nA-->B\n", encoding="utf-8")
     (diagrams / "fabric.svg").write_text("<svg></svg>\n", encoding="utf-8")
     (diagrams / "fabric.png").write_bytes(b"not-empty")
+
+
+def append_node(root: Path, node_yaml: str) -> None:
+    nodes_path = root / "inventory" / "nodes.yaml"
+    nodes_path.write_text(
+        nodes_path.read_text(encoding="utf-8") + node_yaml,
+        encoding="utf-8",
+    )
 
 
 def parse_json_output(result: subprocess.CompletedProcess[str]) -> dict[str, Any]:

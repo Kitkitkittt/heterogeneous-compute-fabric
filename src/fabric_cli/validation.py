@@ -89,6 +89,12 @@ def validate_registries(root: Path) -> Check:
             errors.append(f"{node_id}: invalid Admission State")
         if not node_value.get("roles"):
             errors.append(f"{node_id}: at least one Role is required")
+        roles = node_value.get("roles", [])
+        role_admission = node_value.get("role_admission")
+        if not isinstance(role_admission, dict) or set(role_admission) != set(roles):
+            errors.append(f"{node_id}: role_admission must cover every declared Role")
+        elif any(state not in ALLOWED_ADMISSION_STATES for state in role_admission.values()):
+            errors.append(f"{node_id}: role_admission has an invalid state")
         if not node_value.get("admission_gates"):
             errors.append(f"{node_id}: at least one Admission Gate is required")
         _walk_evidence(node_value.get("hardware", {}), node_id, errors)

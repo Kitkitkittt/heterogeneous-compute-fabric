@@ -12,6 +12,10 @@ nodes:
     kind: owned_physical
     admission_state: install_pending
     roles: [interactive-development, control, light-test]
+    role_admission:
+      interactive-development: install_pending
+      control: install_pending
+      light-test: install_pending
     task_label: node:dev-01
     hardware:
       system:
@@ -61,6 +65,12 @@ nodes:
     kind: owned_physical
     admission_state: install_pending
     roles: [cpu-build, ram-build, cuda, inference, batch]
+    role_admission:
+      cpu-build: install_pending
+      ram-build: install_pending
+      cuda: install_pending
+      inference: install_pending
+      batch: install_pending
     task_label: node:compute-01
     hardware:
       system:
@@ -111,6 +121,10 @@ nodes:
     kind: cloud_vm
     admission_state: verified
     roles: [arm64-build, bounded-agent, auxiliary-service]
+    role_admission:
+      arm64-build: verified
+      bounded-agent: verified
+      auxiliary-service: verified
     task_label: node:cloud-01
     hardware:
       system:
@@ -143,6 +157,12 @@ nodes:
     kind: owned_physical
     admission_state: verified
     roles: [deployment, persistent-service, database, storage, staging]
+    role_admission:
+      deployment: verified
+      persistent-service: verified
+      database: verified
+      storage: verified
+      staging: verified
     task_label: node:deploy-01
     hardware:
       system:
