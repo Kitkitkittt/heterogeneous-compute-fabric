@@ -11,6 +11,7 @@ import yaml
 from fabric_cli.admission import generate_admission_report
 from fabric_cli.frontier import FileIssueSource, GithubIssueSource, build_frontier
 from fabric_cli.overlay import validate_overlay
+from fabric_cli.pilot import RecordOnlyDeploymentAdapter, run_pilot
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
 
@@ -54,6 +55,16 @@ def _parser() -> argparse.ArgumentParser:
     frontier_source.add_argument("--issues-file", type=Path)
     frontier_source.add_argument("--repository")
     frontier.add_argument("--format", choices=("human", "json"), default="human")
+
+    pilot = subparsers.add_parser("pilot", help="run a deterministic bounded pilot")
+    pilot.add_argument("--root", type=Path, default=Path.cwd())
+    pilot.add_argument("--request", type=Path, required=True)
+    pilot.add_argument("--artifact", type=Path, required=True)
+    pilot.add_argument("--health-evidence", type=Path, required=True)
+    pilot.add_argument("--rollback-evidence", type=Path, required=True)
+    pilot.add_argument("--receipt", type=Path, required=True)
+    pilot.add_argument("--deployment-authorized", action="store_true")
+    pilot.add_argument("--format", choices=("human", "json"), default="human")
     return parser
 
 
@@ -100,6 +111,13 @@ def _render_frontier_human(payload: dict[str, Any]) -> str:
             for conflict in issue["node_conflicts"]
         )
     return "\n".join(lines)
+
+
+def _render_pilot_human(payload: dict[str, Any]) -> str:
+    return (
+        f"Pilot recorded: {payload['worker']} -> "
+        f"sha256:{payload['artifact']['sha256']} -> record-only deployment"
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -180,6 +198,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             json.dumps(payload, sort_keys=True)
             if args.format == "json"
             else _render_frontier_human(payload)
+        )
+        return 0
+    if args.command == "pilot":
+        try:
+            payload = run_pilot(
+                args.root.resolve(),
+                args.request.resolve(),
+                args.artifact.resolve(),
+                args.health_evidence.resolve(),
+                args.rollback_evidence.resolve(),
+                args.deployment_authorized,
+                RecordOnlyDeploymentAdapter(args.receipt.resolve()),
+            )
+        except (OSError, ValueError, json.JSONDecodeError, yaml.YAMLError) as exc:
+            payload = {"error": str(exc), "ok": False}
+            print(json.dumps(payload, sort_keys=True) if args.format == "json" else str(exc))
+            return 1
+        print(
+            json.dumps(payload, sort_keys=True)
+            if args.format == "json"
+            else _render_pilot_human(payload)
         )
         return 0
     raise AssertionError(f"unhandled command: {args.command}")
