@@ -1,0 +1,7 @@
+# Private operator data never belongs in this public repository.
+private/
+inventory/private.yaml
+
+# Local validation output.
+.validation/
+

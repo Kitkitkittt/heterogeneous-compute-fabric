@@ -1,83 +1,112 @@
-# Current architecture and workload routing
+# Architecture and workload routing
 
-This document turns the initial concept into an operating model that reflects the 2026-08-27 read-only audit.
+## Identity model
 
-## The three roles
+```text
+Node Slot          stable public identity       compute-01
+  -> Hardware      replaceable assignment       x86 CPU + NVIDIA GPU
+  -> Installation  disposable operating state  ubuntu24
+  -> Private map   restricted connection data   hostname/user/address
+```
 
-### DEV — control and interactive work
+The Node Slot is the coordination unit. Hardware and installations can change without forcing issue, label, or runbook renames.
 
-`KeithVo` remains the human-facing control node. It owns planning, browser work, Git coordination, primary editing, and short feedback loops. It should not become the persistent database or local-model server.
+## Four current Node Slots
 
-### COMPUTE — CPU, RAM, and GPU work
+### `dev-01`
 
-`desktop-x2w7f` is not merely a GPU appliance. Treat it as three capacity lanes behind one host:
+The interactive control and development workstation. Route planning, editing, browser work, Git coordination, and short feedback loops here. Do not assume it has spare memory or use it as a persistent service host without a fresh snapshot gate.
 
-- **CPU lane:** builds, test shards, compilation, extraction, indexing, and data transforms.
-- **RAM lane:** large dependency graphs, datasets, multiple isolated worktrees, and CPU offload.
-- **GPU lane:** CUDA, local inference, embeddings, reranking, vision encoders, and bounded ML experiments.
+### `compute-01`
 
-The logical name `compute` better describes the role. `gpu` can remain a compatibility alias if scripts already expect it.
+A hybrid worker with three independent capacity lanes:
 
-Suggested starting policy, to validate after live access is restored:
+- CPU lane for x86_64 builds, tests, data preparation, and light coding;
+- RAM lane for memory-heavy tooling and larger build/test jobs;
+- CUDA lane for NVIDIA inference, GPU tests, and compatible model workloads.
 
-- one GPU-exclusive job at a time;
-- no more than four CPU-heavy workers initially;
-- light coding may run concurrently only while memory, thermals, and GPU-serving latency remain healthy;
-- every agent uses its own Git worktree; no shared live source directory.
+A task need not use the GPU to be suitable for `compute-01`.
 
-These are safe initial limits, not measured capacity claims.
+### `cloud-01`
 
-### DEPLOY — services, data, and storage
+An ARM64 cloud worker for bounded agents, architecture-compatible builds, and auxiliary services. Treat cost status, workload ownership, storage headroom, and recovery evidence as gates. Cloud allocation is capacity, not proof that a task is free to run.
 
-`vphk2001-GE62-6QC` should converge toward a boring service node. It already hosts databases, containers, tunnels, and Research Wiki services. The audit shows interactive Python/OpenCode/VS Code work saturating its four CPU cores, so new builds, tests, indexing, or agents should not be scheduled there while that pressure remains.
+### `deploy-01`
 
-Its GTX 960M 2 GB is live and idle, but it is not a useful substitute for the RTX 4060 Ti. Keep it optional for tiny experiments or display duties; do not route primary model serving to it.
+The persistent service, staging, database, and storage node. Serving continuity has priority over interactive compute. New work requires owner and resource-budget checks.
 
-## Current fabric
+## Public and private control planes
 
-![Current three-machine fabric](diagrams/current-fabric.png)
+The public repository contains:
 
-Source: [current-fabric.mmd](diagrams/current-fabric.mmd) · [SVG](diagrams/current-fabric.svg)
+- stable Node Slots and roles;
+- durable hardware capacity with field-level evidence;
+- OS Profile policy and admission gates;
+- repository compatibility contracts;
+- sanitized diagrams and runbooks.
 
-Solid arrows are currently verified. Dashed arrows are intended or only partially verified.
+The private operations overlay contains:
+
+- current hostname and private-network identity;
+- SSH user and public-key authorization state;
+- owners, services, recovery locations, and live utilization;
+- credential references, but never raw secrets.
+
+An agent needs the public contract to decide **where** work belongs and authorized private data to decide **how** to connect.
+
+## Linux baseline
+
+`ubuntu24` is the v1 baseline for `dev-01` and `compute-01`. It minimizes bootstrap branches and follows explicit Docker and NVIDIA support paths.
+
+`pop24` is a supported workstation-only exception for `dev-01`. It shares the protocol layer but requires a separate bootstrap and acceptance report. Fedora can interoperate over Tailscale, SSH, Git, and containers, but is experimental for this fabric until it has an owned profile and current vendor-support evidence.
+
+Mixed distributions do not break communication. They increase operational variance in package management, security defaults, driver packaging, upgrades, and troubleshooting.
+
+## Admission lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> inventoried
+    inventoried --> install_pending: reinstall approved
+    install_pending --> installed: human records install evidence
+    installed --> verified: agent passes base checks
+    verified --> schedulable: every role gate passes
+    schedulable --> drained: maintenance or incident
+    drained --> verified: remediation verified
+    drained --> retired: assignment removed
+```
+
+State is stored in `inventory/nodes.yaml`. GitHub triage labels describe issue readiness; they do not replace node admission state.
 
 ## Workload routing
 
 ![Workload routing](diagrams/workload-routing.png)
 
-Source: [workload-routing.mmd](diagrams/workload-routing.mmd) · [SVG](diagrams/workload-routing.svg)
+| Workload | Preferred node | Required gates |
+| --- | --- | --- |
+| Interactive editing and browser work | `dev-01` | workstation profile, free-memory snapshot |
+| x86_64 CPU build or test | `compute-01` | base verification, bounded resource budget |
+| CUDA test or inference | `compute-01` | driver, `nvidia-smi`, host smoke test, GPU-container smoke test |
+| ARM64 build or agent | `cloud-01` | architecture compatibility, cost/owner/storage gates |
+| Persistent service or database | `deploy-01` | service owner, backup/restore, capacity budget, rollback |
+| Immutable artifact storage | declared storage target | owner, integrity, retention, restore evidence |
 
-## Placement matrix
+## Source and artifact flow
 
-| Workload | Primary | Fallback | Gate |
-| --- | --- | --- | --- |
-| Architecture, planning, browser research | DEV | Cloud frontier model | Keep local interaction responsive |
-| Editing and short unit tests | DEV | COMPUTE CPU/RAM lane | COMPUTE needs verified SSH and isolated worktree |
-| Light coding agent | COMPUTE CPU/RAM lane | DEV | Admit only after load, RAM, and worktree ownership check |
-| Large build or test shard | COMPUTE CPU lane | Queue | Do not spill onto DEPLOY under current load |
-| Extraction, indexing, batch transforms | COMPUTE CPU/RAM lane | Queue | Bound concurrency and disk use |
-| CUDA, embeddings, reranking, local inference | COMPUTE GPU lane | Cloud API | One GPU-exclusive job initially |
-| Persistent databases and APIs | DEPLOY | None until failover exists | Protect service latency and storage |
-| Staging deployment | DEPLOY | None until failover exists | Git commit/image plus health check |
-| Large artifacts and datasets | DEPLOY storage | Future object store | Prefer wired path; avoid source-code sharing |
+```text
+issue -> isolated worktree -> commit -> eligible worker -> immutable result
+      -> review -> deployment issue -> deploy-01 -> health and rollback evidence
+```
 
-## Admission gate for every remote job
+- Git coordinates source; do not synchronize live writable trees.
+- Every active writer owns an issue-linked branch and isolated worktree.
+- A repository contract declares architectures and required roles.
+- Deployment consumes a commit or immutable image, not another node's working directory.
 
-Before dispatching work, check:
+## Scaling rules
 
-1. identity and reachability;
-2. current CPU load, free/available RAM, swap, and disk headroom;
-3. active writers and process ownership;
-4. target worktree, branch, and clean/dirty state;
-5. job concurrency and whether it competes with a serving workload;
-6. an explicit result path: Git commit, test result, or immutable artifact.
+- Add capacity inside an existing purpose as the next ordinal, for example `compute-02`.
+- Add a new purpose with a new series, for example `storage-01` or `gateway-01`.
+- A GitHub task may carry several `node:<node-id>` labels when multiple nodes are suitable.
+- Keep scheduling manual until one end-to-end pilot exposes a concrete automation problem.
 
-If a gate cannot be checked, queue the task instead of guessing.
-
-## Coordination contracts
-
-- **Source:** Git branches and worktrees.
-- **Heavy execution:** read-only dispatch first; writes only inside an issue-owned worktree after authorization.
-- **Artifacts:** explicit paths or a future object store; never a shared live checkout.
-- **Deployment:** immutable commit or image, then health check.
-- **Secrets:** environment or secret store only; never repository configuration.

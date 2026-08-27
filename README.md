@@ -1,32 +1,58 @@
 # Heterogeneous Compute Fabric
 
-A three-machine personal compute fabric for agentic coding, local AI, batch work, persistent services, and storage. The design distributes **jobs** across machines; it does not try to combine heterogeneous hardware into one virtual computer or one distributed model.
+A public-safe source of truth for a small compute fabric that can grow from four nodes into multiple development, compute, cloud, deployment, storage, and gateway nodes.
 
-![Current three-machine fabric](docs/diagrams/current-fabric.png)
+The fabric distributes **jobs and artifacts**. It does not combine heterogeneous hardware into one virtual computer or split one model across every device.
 
-## Current operating model
+![Logical compute fabric](docs/diagrams/current-fabric.png)
 
-| Logical role | Current host | Best use | Current gate |
-| --- | --- | --- | --- |
-| `dev` | `KeithVo` | Human-facing control, editing, planning, light tests | Usable; low free memory and 100 Mbps active Ethernet observed |
-| `compute` (`gpu` compatibility name) | `desktop-x2w7f` | Light coding, CPU/RAM builds and tests, CUDA, local models | Tailscale-visible; SSH audit blocked |
-| `deploy` | `vphk2001-GE62-6QC` | Persistent services, databases, storage, staging | Serving, but currently overloaded by interactive compute |
+## Node registry
 
-The important correction from the initial handoff is that `desktop-x2w7f` is a **hybrid compute node**. Its i5-12400F and 48 GB RAM are useful even when a task does not need the RTX 4060 Ti.
+| Stable node ID | Purpose | Durable capacity | OS policy | Admission state |
+| --- | --- | --- | --- | --- |
+| `dev-01` | Interactive development and control | Ryzen 7 7840S, 32 GiB, Radeon 780M, 1 TB NVMe | Ubuntu 24.04 LTS; Pop!_OS 24.04 is a supported workstation exception | `install_pending` |
+| `compute-01` | CPU/RAM builds, CUDA, inference, batch work | Core i5-12400F, 48 GB, RTX 4060 Ti 16 GB, 500 GB SSD + 2 TB disk | Ubuntu 24.04 LTS, headless-first | `install_pending` |
+| `cloud-01` | Bounded ARM64 builds, agents, and auxiliary services | OCI A1 Flex, 4 ARM OCPUs, 24 GB, 50 GB-class boot volume | Existing Linux installation | `verified`, gated |
+| `deploy-01` | Persistent services, databases, staging, and storage | Core i5-6300HQ, 23 GiB visible, GTX 960M 2 GB, NVMe + USB SSD/HDD | Existing Ubuntu installation | `verified`, gated |
+
+Admission is fail-closed. A node is not schedulable merely because it boots or answers SSH.
 
 ## Start here
 
-- [Current architecture and workload routing](docs/architecture.md)
-- [Read-only audit — 2026-08-27](docs/audits/2026-08-27-three-machine-audit.md)
-- [DEV inventory](inventory/dev.md)
-- [COMPUTE inventory](inventory/compute.md)
-- [DEPLOY inventory](inventory/deploy.md)
-- [Original handoff](handoff.md)
+- [Domain language](CONTEXT.md)
+- [Architecture and workload routing](docs/architecture.md)
+- [Machine-readable node registry](inventory/nodes.yaml)
+- [Repository registry](inventory/repositories.yaml)
+- [Reinstall and admission runbook](docs/runbooks/reinstall-and-admit-node.md)
+- [GitHub task routing and node labels](docs/task-routing.md)
+- [Public/private operations boundary](docs/runbooks/private-operations-overlay.md)
+- [Sanitized audit evidence](docs/audits/2026-08-27-four-node-audit.md)
+- [Linux baseline research](docs/research/linux-baseline-options.md)
+- [Current operator handoff](handoff.md)
 
-## Near-term gates
+Detailed public hardware records:
 
-1. Restore and verify read-only SSH access to `desktop-x2w7f` without changing it during this audit.
-2. Establish documented aliases (`dev`, `compute`/`gpu`, `deploy`) after access is explicitly authorized.
-3. Remove interactive development and heavy test pressure from `deploy` before assigning it more work.
-4. Prefer wired networking for artifact transfer; both remote Tailscale probes currently relay rather than connect directly.
-5. Prove one Git-based `dev -> compute -> deploy` workflow before adding a scheduler.
+- [`dev-01`](inventory/dev-01.md)
+- [`compute-01`](inventory/compute-01.md)
+- [`cloud-01`](inventory/cloud-01.md)
+- [`deploy-01`](inventory/deploy-01.md)
+
+## Operating rules
+
+1. Use stable node IDs in issues, labels, documentation, and evidence. Hostnames are replaceable installation details.
+2. Keep hostnames, addresses, SSH users, owners, service inventory, live utilization, and recovery locations in a private operations overlay.
+3. Record evidence per field as `verified`, `inherited`, or `unknown`, with a lifetime of `chassis`, `installation`, or `snapshot`.
+4. Use Git commits or immutable artifacts between nodes. Never share one writable checkout across agents.
+5. Route by declared capabilities and architecture. ARM64, x86_64, CUDA, serving, and storage are separate constraints.
+6. Reinstallation and other destructive work requires a `ready-for-human` issue. Post-install verification is a separate `ready-for-agent` issue.
+
+## Next gates
+
+1. Human operator completes [issue #3](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/3): reinstall `compute-01` with Ubuntu 24.04 LTS.
+2. An agent completes [issue #4](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/4): verify hardware, private networking/SSH, NVIDIA/CUDA containers, storage, thermals, Git, and an isolated worktree before marking it `schedulable`.
+3. Human operator completes [issue #5](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/5): reinstall `dev-01` with Ubuntu 24.04 LTS, or explicitly select the supported Pop!_OS workstation profile.
+4. An agent completes [issue #6](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/6): verify the DEV workstation acceptance matrix before admission.
+5. Resolve CLOUD cost/ownership/storage gates and DEPLOY ownership/capacity gates before assigning either new work.
+6. Run one bounded Git-to-worker-to-deployment pilot before adding a scheduler or cluster framework.
+
+The current files are sanitized. [Issue #7](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/7) separately tracks the owner-authorized rewrite needed to remove superseded identifiers from previously published Git history.
