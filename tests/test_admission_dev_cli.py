@@ -43,6 +43,7 @@ def _write_dev_observations(path: Path, os_profile: str, include_pop_gate: bool)
             {
                 "schema": "heterogeneous-compute-fabric/admission-observations-v1",
                 "node_id": "dev-01",
+                "role_profile": "workstation",
                 "os_profile": os_profile,
                 "checks": checks,
             }
@@ -61,8 +62,12 @@ def test_dev_report_admits_a_complete_ubuntu_workstation(
     result = run_fabric(
         "admission",
         "report",
-        "--profile",
+        "--node-id",
         "dev-01",
+        "--role-profile",
+        "workstation",
+        "--os-profile",
+        "ubuntu24",
         "--observations",
         str(observations),
         "--format",
@@ -91,8 +96,12 @@ def test_pop_workstation_stays_gated_without_its_profile_specific_policy(
     result = run_fabric(
         "admission",
         "report",
-        "--profile",
+        "--node-id",
         "dev-01",
+        "--role-profile",
+        "workstation",
+        "--os-profile",
+        "pop24",
         "--observations",
         str(observations),
         "--format",

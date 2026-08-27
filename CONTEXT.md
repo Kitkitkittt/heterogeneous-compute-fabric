@@ -28,6 +28,10 @@ A versioned bootstrap and acceptance contract, such as `ubuntu24` or `pop24`. Sh
 
 A schedulable capability such as `interactive-development`, `cpu-build`, `cuda`, `arm64-build`, `deployment`, or `storage`. Roles are labels on a Node Slot, not permanent claims about a machine.
 
+### Role Profile
+
+A reusable admission-check bundle such as `compute` or `workstation`. It maps observed checks to Roles but does not identify a Node Slot or an operating system. For example, `compute-02` can reuse the `compute` Role Profile while selecting the `ubuntu24` OS Profile.
+
 ### Admission State
 
 The fail-closed lifecycle of a Node Slot:
@@ -67,7 +71,7 @@ A machine-readable declaration of a repository's architecture support, capabilit
 ## Invariants
 
 - Public Node Slot identity is independent of private network identity.
-- No Node Slot becomes schedulable without recorded admission evidence.
+- No Node Slot or Role becomes schedulable without directly verified, dated admission evidence and a public-safe source reference.
 - Human-authorized destructive work and agent verification are separate issues.
 - Source moves through Git; outputs move as immutable artifacts.
 - Task suitability may name multiple Node Slots through `node:<node-id>` labels.

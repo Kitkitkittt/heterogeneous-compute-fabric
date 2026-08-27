@@ -14,4 +14,5 @@ __pycache__/
 *.py[cod]
 dist/
 build/
+node_modules/
 

@@ -94,3 +94,67 @@ nodes:
         "ok": False,
     }
     assert raw_secret not in result.stdout
+
+
+def test_overlay_rejects_credential_values_that_are_not_store_references(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    write_valid_registry(tmp_path)
+    overlay = tmp_path.parent / "bare-credential.yaml"
+    overlay.write_text(
+        """\
+schema: heterogeneous-compute-fabric/private-operations-v1
+nodes:
+  - node_id: compute-01
+    credential_references: [plain-text-key]
+""",
+        encoding="utf-8",
+    )
+
+    result = run_fabric(
+        "overlay",
+        "validate",
+        "--root",
+        str(tmp_path),
+        "--overlay",
+        str(overlay),
+        "--format",
+        "json",
+    )
+
+    assert result.returncode == 1
+    assert parse_json_output(result)["errors"] == [
+        "nodes[0]: credential references must use a credential-store URI"
+    ]
+
+
+def test_overlay_requires_at_least_one_credential_reference(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    write_valid_registry(tmp_path)
+    overlay = tmp_path.parent / "empty-credentials.yaml"
+    overlay.write_text(
+        """\
+schema: heterogeneous-compute-fabric/private-operations-v1
+nodes:
+  - node_id: compute-01
+    credential_references: []
+""",
+        encoding="utf-8",
+    )
+
+    result = run_fabric(
+        "overlay",
+        "validate",
+        "--root",
+        str(tmp_path),
+        "--overlay",
+        str(overlay),
+        "--format",
+        "json",
+    )
+
+    assert result.returncode == 1
+    assert parse_json_output(result)["errors"] == ["nodes[0]: credential references are required"]

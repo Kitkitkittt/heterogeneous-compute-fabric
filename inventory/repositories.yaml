@@ -16,7 +16,7 @@ repositories:
     supported_architectures: [x86_64, arm64]
     required_roles: []
     eligible_nodes: [dev-01, compute-01, cloud-01, deploy-01]
-    bootstrap_command: uv sync
+    bootstrap_command: uv sync and npm ci
     verification_command: uv run fabric validate --root .
     deployment_targets: []
     secrets_required: []

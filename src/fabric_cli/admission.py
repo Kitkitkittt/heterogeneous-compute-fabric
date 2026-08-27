@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-import yaml
+from fabric_cli.io import load_mapping
+from fabric_cli.safety import contains_private_identity
 
 CheckStatus = Literal["pass", "fail", "unknown"]
 ReportView = Literal["public", "private"]
@@ -16,74 +17,44 @@ BASE_CHECKS = (
     "git_worktree",
     "load_thermals",
 )
-PROFILE_ROLES: dict[str, dict[str, tuple[str, ...]]] = {
-    "compute-01": {
-        "cpu-build": ("cpu_ram",),
-        "ram-build": ("cpu_ram",),
-        "batch": ("cpu_ram",),
-        "cuda": (
-            "nvidia_identity",
-            "nvidia_driver",
-            "host_gpu_smoke",
-            "container_toolkit",
-            "gpu_container_smoke",
-        ),
-        "inference": (
-            "nvidia_identity",
-            "nvidia_driver",
-            "host_gpu_smoke",
-            "container_toolkit",
-            "gpu_container_smoke",
-        ),
+GPU_CHECKS = (
+    "nvidia_identity",
+    "nvidia_driver",
+    "host_gpu_smoke",
+    "container_toolkit",
+    "gpu_container_smoke",
+)
+WORKSTATION_CHECKS = (
+    "displays",
+    "browser_acceleration",
+    "suspend_resume",
+    "shutdown_reboot",
+    "ethernet",
+    "wifi",
+    "bluetooth",
+    "audio",
+    "usb",
+    "editor_toolchain",
+    "containers",
+    "graphics_smoke",
+)
+ROLE_PROFILE_REQUIREMENTS: dict[str, dict[str, tuple[str, ...]]] = {
+    "compute": {
+        "cpu-build": ("cpu_execution",),
+        "ram-build": ("memory_execution",),
+        "batch": ("cpu_execution", "memory_execution"),
+        "cuda": GPU_CHECKS,
+        "inference": GPU_CHECKS,
     },
-    "dev-01": {
-        "interactive-development": (
-            "displays",
-            "browser_acceleration",
-            "suspend_resume",
-            "shutdown_reboot",
-            "ethernet",
-            "wifi",
-            "bluetooth",
-            "audio",
-            "usb",
-            "editor_toolchain",
-            "containers",
-            "graphics_smoke",
-        ),
-        "control": (
-            "displays",
-            "browser_acceleration",
-            "suspend_resume",
-            "shutdown_reboot",
-            "ethernet",
-            "wifi",
-            "bluetooth",
-            "audio",
-            "usb",
-            "editor_toolchain",
-            "containers",
-            "graphics_smoke",
-        ),
-        "light-test": (
-            "displays",
-            "browser_acceleration",
-            "suspend_resume",
-            "shutdown_reboot",
-            "ethernet",
-            "wifi",
-            "bluetooth",
-            "audio",
-            "usb",
-            "editor_toolchain",
-            "containers",
-            "graphics_smoke",
-        ),
+    "workstation": {
+        "interactive-development": WORKSTATION_CHECKS,
+        "control": WORKSTATION_CHECKS,
+        "light-test": WORKSTATION_CHECKS,
     },
 }
 ALLOWED_OS_PROFILES: dict[str, tuple[str, ...]] = {
-    "compute-01": ("ubuntu24",),
-    "dev-01": ("ubuntu24", "pop24"),
+    "compute": ("ubuntu24",),
+    "workstation": ("ubuntu24", "pop24"),
 }
 POP_PROFILE_CHECKS = ("secure_boot_policy", "profile_upgrade_path")
 
@@ -96,9 +67,12 @@ class Observation:
     private_evidence: str | None
 
     def as_dict(self, view: ReportView) -> dict[str, Any]:
+        public_evidence = (
+            f"{self.name} check {self.status}" if view == "public" else self.public_evidence
+        )
         result: dict[str, Any] = {
             "name": self.name,
-            "public_evidence": self.public_evidence,
+            "public_evidence": public_evidence,
             "status": self.status,
         }
         if view == "private":
@@ -109,7 +83,8 @@ class Observation:
 @dataclass(frozen=True)
 class AdmissionReport:
     node_id: str
-    profile: str
+    role_profile: str
+    os_profile: str
     node_admission: str
     role_admission: dict[str, str]
     observations: tuple[Observation, ...]
@@ -130,9 +105,10 @@ class AdmissionReport:
             "node_admission": self.node_admission,
             "node_id": self.node_id,
             "ok": self.ok,
+            "os_profile": self.os_profile,
             "private_details_included": self.view == "private",
-            "profile": self.profile,
             "role_admission": dict(sorted(self.role_admission.items())),
+            "role_profile": self.role_profile,
             "unknown_checks": [
                 observation.name
                 for observation in self.observations
@@ -141,24 +117,19 @@ class AdmissionReport:
         }
 
 
-def _load_mapping(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as handle:
-        value = yaml.safe_load(handle)
-    if not isinstance(value, dict):
-        raise ValueError("observations must contain a mapping")
-    return value
-
-
-def _role_requirements(profile: str, os_profile: str) -> dict[str, tuple[str, ...]]:
-    base_roles = PROFILE_ROLES.get(profile)
+def role_requirements(role_profile: str, os_profile: str) -> dict[str, tuple[str, ...]]:
+    base_roles = ROLE_PROFILE_REQUIREMENTS.get(role_profile)
     if base_roles is None:
-        raise ValueError(f"unknown admission profile: {profile}")
-    if profile == "dev-01" and os_profile == "pop24":
+        raise ValueError(f"unknown admission role profile: {role_profile}")
+    if os_profile not in ALLOWED_OS_PROFILES[role_profile]:
+        raise ValueError("OS Profile is not allowed for the selected Role profile")
+    if role_profile == "workstation" and os_profile == "pop24":
         return {role: (*checks, *POP_PROFILE_CHECKS) for role, checks in base_roles.items()}
     return base_roles
 
 
-def _required_checks(roles: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
+def required_checks(role_profile: str, os_profile: str) -> tuple[str, ...]:
+    roles = role_requirements(role_profile, os_profile)
     return tuple(
         dict.fromkeys([*BASE_CHECKS, *(check for checks in roles.values() for check in checks)])
     )
@@ -173,6 +144,8 @@ def _observation(name: str, values: dict[str, Any]) -> Observation:
         raise ValueError(f"{name}: invalid check status")
     public = value.get("public_evidence")
     private = value.get("private_evidence")
+    if isinstance(public, str) and contains_private_identity(public):
+        raise ValueError(f"{name}: public evidence contains prohibited private identity")
     return Observation(
         name,
         status_value,
@@ -182,36 +155,39 @@ def _observation(name: str, values: dict[str, Any]) -> Observation:
 
 
 def generate_admission_report(
-    profile: str,
+    node_id: str,
+    role_profile: str,
+    os_profile: str,
     observations_path: Path,
     view: ReportView,
 ) -> AdmissionReport:
-    document = _load_mapping(observations_path)
+    document = load_mapping(observations_path, "observations")
     if document.get("schema") != "heterogeneous-compute-fabric/admission-observations-v1":
         raise ValueError("observations have an unsupported schema")
-    node_id = document.get("node_id")
-    if node_id != profile:
-        raise ValueError("observation Node Slot does not match the selected profile")
-    os_profile = document.get("os_profile")
-    if not isinstance(os_profile, str) or os_profile not in ALLOWED_OS_PROFILES.get(profile, ()):
-        raise ValueError("OS Profile is not allowed for the selected Node Slot")
+    if document.get("node_id") != node_id:
+        raise ValueError("observation Node Slot does not match --node-id")
+    if document.get("role_profile") != role_profile:
+        raise ValueError("observation Role profile does not match --role-profile")
+    if document.get("os_profile") != os_profile:
+        raise ValueError("observation OS Profile does not match --os-profile")
     values = document.get("checks")
     if not isinstance(values, dict):
         raise ValueError("observations checks must be a mapping")
 
-    roles = _role_requirements(profile, os_profile)
-    observations = tuple(_observation(name, values) for name in _required_checks(roles))
+    roles = role_requirements(role_profile, os_profile)
+    observations = tuple(
+        _observation(name, values) for name in required_checks(role_profile, os_profile)
+    )
     statuses = {observation.name: observation.status for observation in observations}
     base_passed = all(statuses[name] == "pass" for name in BASE_CHECKS)
-
-    role_admission: dict[str, str] = {}
-    for role, role_checks in roles.items():
-        role_admission[role] = (
+    role_admission = {
+        role: (
             "schedulable"
             if base_passed and all(statuses[name] == "pass" for name in role_checks)
             else "installed"
         )
-
+        for role, role_checks in roles.items()
+    }
     if any(state == "schedulable" for state in role_admission.values()):
         node_admission = "schedulable"
     elif base_passed:
@@ -221,7 +197,8 @@ def generate_admission_report(
 
     return AdmissionReport(
         node_id,
-        profile,
+        role_profile,
+        os_profile,
         node_admission,
         role_admission,
         observations,

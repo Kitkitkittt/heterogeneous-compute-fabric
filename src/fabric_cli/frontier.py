@@ -156,6 +156,8 @@ def build_frontier(root: Path, source: IssueSource) -> FrontierReport:
             continue
 
         labels = _label_names(value)
+        if "wontfix" in labels:
+            continue
         triage = [label for label in labels if label in TRIAGE_ACTORS]
         next_actor = TRIAGE_ACTORS[triage[0]] if len(triage) == 1 else "untriaged"
         suitable_nodes = tuple(

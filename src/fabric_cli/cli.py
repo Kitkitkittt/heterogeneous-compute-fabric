@@ -10,8 +10,16 @@ import yaml
 
 from fabric_cli.admission import generate_admission_report
 from fabric_cli.frontier import FileIssueSource, GithubIssueSource, build_frontier
+from fabric_cli.io import load_mapping
+from fabric_cli.issues import FixtureIssueVerifier, GithubIssueVerifier, IssueVerifier
 from fabric_cli.overlay import validate_overlay
 from fabric_cli.pilot import RecordOnlyDeploymentAdapter, run_pilot
+from fabric_cli.probes import (
+    FixtureProbeAdapter,
+    LinuxLocalProbeAdapter,
+    ProbeAdapter,
+    collect_observations,
+)
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
 
@@ -44,10 +52,30 @@ def _parser() -> argparse.ArgumentParser:
     admission_report = admission_subparsers.add_parser(
         "report", help="generate an admission report"
     )
-    admission_report.add_argument("--profile", required=True)
+    admission_report.add_argument("--node-id", required=True)
+    admission_report.add_argument(
+        "--role-profile", choices=("compute", "workstation"), required=True
+    )
+    admission_report.add_argument("--os-profile", choices=("ubuntu24", "pop24"), required=True)
     admission_report.add_argument("--observations", type=Path, required=True)
     admission_report.add_argument("--view", choices=("public", "private"), default="public")
     admission_report.add_argument("--format", choices=("human", "json"), default="human")
+    admission_collect = admission_subparsers.add_parser(
+        "collect", help="collect read-only Linux admission observations"
+    )
+    admission_collect.add_argument("--node-id", required=True)
+    admission_collect.add_argument(
+        "--role-profile", choices=("compute", "workstation"), required=True
+    )
+    admission_collect.add_argument("--os-profile", choices=("ubuntu24", "pop24"), required=True)
+    admission_collect.add_argument(
+        "--adapter", choices=("linux-local", "fixture"), default="linux-local"
+    )
+    admission_collect.add_argument("--probe-results", type=Path)
+    admission_collect.add_argument("--probe-config", type=Path)
+    admission_collect.add_argument("--probe-cwd", type=Path, default=Path.cwd())
+    admission_collect.add_argument("--output", type=Path, required=True)
+    admission_collect.add_argument("--format", choices=("human", "json"), default="human")
 
     frontier = subparsers.add_parser("frontier", help="report the actionable issue frontier")
     frontier.add_argument("--root", type=Path, default=Path.cwd())
@@ -59,7 +87,13 @@ def _parser() -> argparse.ArgumentParser:
     pilot = subparsers.add_parser("pilot", help="run a deterministic bounded pilot")
     pilot.add_argument("--root", type=Path, default=Path.cwd())
     pilot.add_argument("--request", type=Path, required=True)
+    pilot_issue_source = pilot.add_mutually_exclusive_group(required=True)
+    pilot_issue_source.add_argument("--issue-repository")
+    pilot_issue_source.add_argument("--issue-evidence", type=Path)
+    pilot.add_argument("--worktree", type=Path, required=True)
     pilot.add_argument("--artifact", type=Path, required=True)
+    pilot.add_argument("--review-evidence", type=Path, required=True)
+    pilot.add_argument("--test-evidence", type=Path, required=True)
     pilot.add_argument("--health-evidence", type=Path, required=True)
     pilot.add_argument("--rollback-evidence", type=Path, required=True)
     pilot.add_argument("--receipt", type=Path, required=True)
@@ -166,7 +200,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "admission" and args.admission_command == "report":
         try:
             admission_report = generate_admission_report(
-                args.profile,
+                args.node_id,
+                args.role_profile,
+                args.os_profile,
                 args.observations.resolve(),
                 args.view,
             )
@@ -181,6 +217,56 @@ def main(argv: Sequence[str] | None = None) -> int:
             else _render_admission_human(payload)
         )
         return 0 if admission_report.ok else 1
+    if args.command == "admission" and args.admission_command == "collect":
+        try:
+            probe_cwd = args.probe_cwd.resolve()
+            output_path = args.output.resolve()
+            if output_path.is_relative_to(probe_cwd):
+                raise ValueError("private observations must be written outside the probed worktree")
+            adapter: ProbeAdapter
+            if args.adapter == "fixture":
+                if args.probe_results is None:
+                    raise ValueError("--probe-results is required for the fixture adapter")
+                adapter = FixtureProbeAdapter.from_path(args.probe_results.resolve())
+            else:
+                if args.probe_results is not None:
+                    raise ValueError("--probe-results is valid only with the fixture adapter")
+                if args.probe_config is None:
+                    raise ValueError("--probe-config is required for the linux-local adapter")
+                probe_config_path = args.probe_config.resolve()
+                if probe_config_path.is_relative_to(probe_cwd):
+                    raise ValueError(
+                        "private probe configuration must be outside the probed worktree"
+                    )
+                probe_config = load_mapping(probe_config_path, "private probe configuration")
+                private_network_target = probe_config.get("private_network_target")
+                ssh_destination = probe_config.get("ssh_destination")
+                if not isinstance(private_network_target, str) or not private_network_target:
+                    raise ValueError("private probe configuration requires private_network_target")
+                if not isinstance(ssh_destination, str) or not ssh_destination:
+                    raise ValueError("private probe configuration requires ssh_destination")
+                adapter = LinuxLocalProbeAdapter(
+                    probe_cwd,
+                    private_network_target,
+                    ssh_destination,
+                )
+            payload = collect_observations(
+                args.node_id,
+                args.role_profile,
+                args.os_profile,
+                adapter,
+                output_path,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            payload = {"error": str(exc), "ok": False}
+            print(json.dumps(payload, sort_keys=True) if args.format == "json" else str(exc))
+            return 1
+        print(
+            json.dumps(payload, sort_keys=True)
+            if args.format == "json"
+            else f"Collected {payload['check_count']} checks for {payload['node_id']}"
+        )
+        return 0
     if args.command == "frontier":
         try:
             source = (
@@ -202,13 +288,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "pilot":
         try:
+            issue_verifier: IssueVerifier = (
+                FixtureIssueVerifier.from_path(args.issue_evidence.resolve())
+                if args.issue_evidence is not None
+                else GithubIssueVerifier(args.issue_repository)
+            )
             payload = run_pilot(
                 args.root.resolve(),
                 args.request.resolve(),
+                args.worktree.resolve(),
                 args.artifact.resolve(),
+                args.review_evidence.resolve(),
+                args.test_evidence.resolve(),
                 args.health_evidence.resolve(),
                 args.rollback_evidence.resolve(),
                 args.deployment_authorized,
+                issue_verifier,
                 RecordOnlyDeploymentAdapter(args.receipt.resolve()),
             )
         except (OSError, ValueError, json.JSONDecodeError, yaml.YAMLError) as exc:

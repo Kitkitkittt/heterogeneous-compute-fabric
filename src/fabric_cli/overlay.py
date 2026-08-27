@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import yaml
+from fabric_cli.io import load_mapping
 
 RAW_SECRET_KEYS = {
     "api_key",
@@ -15,6 +16,7 @@ RAW_SECRET_KEYS = {
     "secret",
     "token",
 }
+CREDENTIAL_REFERENCE = re.compile(r"^(?:vault|op|pass|secret)://[^\s]+$")
 
 
 @dataclass(frozen=True)
@@ -44,14 +46,6 @@ class OverlayValidationResult:
         }
 
 
-def _load_mapping(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as handle:
-        value = yaml.safe_load(handle)
-    if not isinstance(value, dict):
-        raise ValueError(f"{path.name} must contain a mapping")
-    return value
-
-
 def _contains_raw_secret(value: Any) -> bool:
     if isinstance(value, dict):
         if any(str(key).casefold() in RAW_SECRET_KEYS for key in value):
@@ -63,8 +57,8 @@ def _contains_raw_secret(value: Any) -> bool:
 
 
 def validate_overlay(root: Path, overlay_path: Path) -> OverlayValidationResult:
-    nodes_doc = _load_mapping(root / "inventory" / "nodes.yaml")
-    overlay_doc = _load_mapping(overlay_path)
+    nodes_doc = load_mapping(root / "inventory" / "nodes.yaml")
+    overlay_doc = load_mapping(overlay_path)
     if overlay_doc.get("schema") != "heterogeneous-compute-fabric/private-operations-v1":
         return OverlayValidationResult((), ("overlay has an unsupported schema",))
 
@@ -104,10 +98,15 @@ def validate_overlay(root: Path, overlay_path: Path) -> OverlayValidationResult:
             continue
 
         references = value.get("credential_references")
-        if not isinstance(references, list) or not all(
-            isinstance(reference, str) and reference for reference in references
+        if (
+            not isinstance(references, list)
+            or not references
+            or not all(isinstance(reference, str) and reference for reference in references)
         ):
             errors.append(f"{location}: credential references are required")
+            continue
+        if not all(CREDENTIAL_REFERENCE.fullmatch(reference) for reference in references):
+            errors.append(f"{location}: credential references must use a credential-store URI")
             continue
         summaries.append(OverlayNodeSummary(node_id, len(references)))
 

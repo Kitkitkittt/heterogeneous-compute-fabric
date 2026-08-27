@@ -39,6 +39,7 @@ def test_frontier_lists_only_open_unassigned_unblocked_work(
                 _issue(14, labels=["ready-for-agent"], assignees=["worker"]),
                 _issue(15, state="CLOSED", labels=["ready-for-agent"]),
                 _issue(16, labels=["needs-triage"]),
+                _issue(17, labels=["wontfix"]),
             ]
         ),
         encoding="utf-8",

@@ -1,5 +1,6 @@
 schema: heterogeneous-compute-fabric/admission-observations-v1
 node_id: dev-01
+role_profile: workstation
 os_profile: ubuntu24
 checks:
   hardware: {status: unknown, public_evidence: null, private_evidence: null}
@@ -24,4 +25,3 @@ checks:
 # A pop24 observation bundle must additionally include:
 # secure_boot_policy: {status: unknown, public_evidence: null, private_evidence: null}
 # profile_upgrade_path: {status: unknown, public_evidence: null, private_evidence: null}
-

@@ -15,7 +15,7 @@ The fabric distributes **jobs and artifacts**. It does not combine heterogeneous
 | `cloud-01` | Bounded ARM64 builds, agents, and auxiliary services | OCI A1 Flex, 4 ARM OCPUs, 24 GB, 50 GB-class boot volume | Existing Linux installation | `verified`, gated |
 | `deploy-01` | Persistent services, databases, staging, and storage | Core i5-6300HQ, 23 GiB visible, GTX 960M 2 GB, NVMe + USB SSD/HDD | Existing Ubuntu installation | `verified`, gated |
 
-Admission is fail-closed. A node is not schedulable merely because it boots or answers SSH.
+Admission is fail-closed. A node is not schedulable merely because it boots or answers SSH; routing requires directly verified node, Role, and architecture evidence.
 
 ## Start here
 
@@ -60,13 +60,13 @@ The current files are sanitized. [Issue #7](https://github.com/Kitkitkittt/heter
 
 ## Fabric CLI
 
-The repository includes a fail-closed command for agents and operators. Install the locked development environment with `uv sync`, then validate a fresh checkout:
+The repository includes a fail-closed command for agents and operators. Install the locked environments with `uv sync` and `npm ci`, then validate a fresh checkout:
 
 ```powershell
 uv run fabric validate --root .
 ```
 
-Use `--format json` for automation. An authorized operator may supply a private newline-delimited pattern file with `--prohibited-patterns`; matching values are never repeated in output. The [CLI reference](docs/cli.md) documents routing, overlay, admission, frontier, and pilot commands.
+Use `--format json` for automation. An authorized operator may supply a private newline-delimited pattern file with `--prohibited-patterns`; matching values are never repeated in output. Validation also rejects stale diagram renders and incomplete Repository Contracts. The [CLI reference](docs/cli.md) documents routing, overlay, read-only admission collection, frontier, and pilot commands.
 
 Development checks:
 

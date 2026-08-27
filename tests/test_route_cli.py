@@ -15,11 +15,16 @@ def test_user_can_route_work_to_every_eligible_node(tmp_path: Path, run_fabric: 
     admission_state: schedulable
     roles: [cpu-build]
     role_admission: {cpu-build: schedulable}
+    admission_evidence: {status: verified, observed_at: 2026-08-27, source: acceptance-report}
+    role_admission_evidence:
+      cpu-build: {status: verified, observed_at: 2026-08-27, source: acceptance-report}
     task_label: node:compute-02
     hardware:
       cpu:
         architecture: x86_64
-        evidence: {status: verified, lifetime: chassis}
+        evidence:
+          {status: verified, lifetime: chassis, observed_at: 2026-08-27,
+           source: hardware-audit}
     admission_gates: [hardware-verified]
 """,
     )
@@ -69,11 +74,16 @@ def test_routing_explains_architecture_role_and_admission_failures(
     admission_state: schedulable
     roles: [arm64-build]
     role_admission: {arm64-build: schedulable}
+    admission_evidence: {status: verified, observed_at: 2026-08-27, source: acceptance-report}
+    role_admission_evidence:
+      arm64-build: {status: verified, observed_at: 2026-08-27, source: acceptance-report}
     task_label: node:cloud-01
     hardware:
       cpu:
         architecture: arm64
-        evidence: {status: verified, lifetime: chassis}
+        evidence:
+          {status: verified, lifetime: chassis, observed_at: 2026-08-27,
+           source: hardware-audit}
     admission_gates: [cost-confirmed]
   - node_id: compute-02
     admission_state: verified
@@ -132,6 +142,8 @@ def test_routing_explains_architecture_role_and_admission_failures(
                 "node_id": "compute-02",
                 "reasons": [
                     "node is not schedulable",
+                    "node admission evidence is not directly verified",
+                    "architecture evidence is not directly verified",
                     "Role is not schedulable: cpu-build",
                     "missing Role: cuda",
                 ],
@@ -140,3 +152,49 @@ def test_routing_explains_architecture_role_and_admission_failures(
         "eligible_nodes": [],
         "ok": False,
     }
+
+
+def test_routing_rejects_inherited_admission_evidence(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    write_valid_registry(tmp_path)
+    nodes = tmp_path / "inventory" / "nodes.yaml"
+    nodes.write_text(
+        nodes.read_text(encoding="utf-8")
+        .replace(
+            "    admission_evidence:\n      status: verified",
+            "    admission_evidence:\n      status: inherited",
+        )
+        .replace(
+            "status: verified, observed_at: 2026-08-27, source: acceptance-report",
+            "status: inherited, observed_at: 2026-08-27, source: prior-handoff",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_fabric(
+        "route",
+        "--root",
+        str(tmp_path),
+        "--repository",
+        "sample",
+        "--architecture",
+        "x86_64",
+        "--role",
+        "cpu-build",
+        "--format",
+        "json",
+    )
+
+    assert result.returncode == 1
+    assert parse_json_output(result)["decisions"] == [
+        {
+            "eligible": False,
+            "node_id": "compute-01",
+            "reasons": [
+                "node admission evidence is not directly verified",
+                "Role admission evidence is not directly verified: cpu-build",
+            ],
+        }
+    ]

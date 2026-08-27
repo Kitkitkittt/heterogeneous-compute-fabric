@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -48,11 +50,28 @@ nodes:
     admission_state: schedulable
     roles: [cpu-build]
     role_admission: {cpu-build: schedulable}
+    admission_evidence:
+      status: verified
+      observed_at: 2026-08-27
+      source: acceptance-report
+    role_admission_evidence:
+      cpu-build: {status: verified, observed_at: 2026-08-27, source: acceptance-report}
     task_label: node:compute-01
     hardware:
+      system:
+        model: test-system
+        evidence: {status: verified, lifetime: chassis}
       cpu:
         architecture: x86_64
+        evidence:
+          {status: verified, lifetime: chassis, observed_at: 2026-08-27,
+           source: hardware-audit}
+      memory:
+        installed_gb: 48
         evidence: {status: verified, lifetime: chassis}
+      network_capabilities:
+        values: [private-overlay]
+        evidence: {status: verified, lifetime: installation}
     admission_gates: [hardware-verified]
 """,
         encoding="utf-8",
@@ -60,11 +79,24 @@ nodes:
     (inventory / "repositories.yaml").write_text(
         """\
 schema: heterogeneous-compute-fabric/repositories-v1
+checkout_policy:
+  source_transport: git
+  active_writer: one issue-owned branch in one isolated worktree
+  shared_writable_checkout: forbidden
+  deployment_input: immutable commit or image
 repositories:
   - repo_id: sample
+    access_class: public
+    canonical_remote: https://github.com/owner/repository
+    purpose: behavioral-test fixture
+    default_branch: main
     supported_architectures: [x86_64]
     required_roles: [cpu-build]
     eligible_nodes: [compute-01]
+    bootstrap_command: uv sync
+    verification_command: uv run fabric validate --root .
+    deployment_targets: []
+    secrets_required: []
 """,
         encoding="utf-8",
     )
@@ -72,9 +104,38 @@ repositories:
         "[Nodes](inventory/nodes.yaml)\n![Fabric](docs/diagrams/fabric.png)\n",
         encoding="utf-8",
     )
-    (diagrams / "fabric.mmd").write_text("flowchart LR\nA-->B\n", encoding="utf-8")
-    (diagrams / "fabric.svg").write_text("<svg></svg>\n", encoding="utf-8")
-    (diagrams / "fabric.png").write_bytes(b"not-empty")
+    mermaid = "flowchart LR\nA-->B\n"
+    (diagrams / "fabric.mmd").write_text(mermaid, encoding="utf-8")
+    (diagrams / "fabric.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" '
+        'viewBox="0 0 1200 800"><text>A to B</text></svg>\n',
+        encoding="utf-8",
+    )
+    (diagrams / "fabric.png").write_bytes(
+        b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + struct.pack(">II", 1200, 800)
+    )
+    (diagrams / "render-manifest.json").write_text(
+        json.dumps(
+            {
+                "renderer": "@mermaid-js/mermaid-cli@11.16.0",
+                "schema": "heterogeneous-compute-fabric/diagram-render-manifest-v1",
+                "sources": {
+                    "fabric.mmd": {
+                        "png_sha256": hashlib.sha256(
+                            (diagrams / "fabric.png").read_bytes()
+                        ).hexdigest(),
+                        "source_sha256": hashlib.sha256(
+                            (diagrams / "fabric.mmd").read_bytes()
+                        ).hexdigest(),
+                        "svg_sha256": hashlib.sha256(
+                            (diagrams / "fabric.svg").read_bytes()
+                        ).hexdigest(),
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def append_node(root: Path, node_yaml: str) -> None:
@@ -86,4 +147,6 @@ def append_node(root: Path, node_yaml: str) -> None:
 
 
 def parse_json_output(result: subprocess.CompletedProcess[str]) -> dict[str, Any]:
-    return json.loads(result.stdout)
+    value = json.loads(result.stdout)
+    assert isinstance(value, dict)
+    return value

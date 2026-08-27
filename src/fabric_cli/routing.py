@@ -4,7 +4,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import yaml
+from fabric_cli.evidence import is_direct_evidence
+from fabric_cli.io import load_mapping
 
 
 @dataclass(frozen=True)
@@ -37,14 +38,6 @@ class RouteResult:
         }
 
 
-def _load_yaml(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as handle:
-        value = yaml.safe_load(handle)
-    if not isinstance(value, dict):
-        raise ValueError(f"{path.name} must contain a mapping")
-    return value
-
-
 def _architecture(node: dict[str, Any]) -> str | None:
     hardware = node.get("hardware")
     if not isinstance(hardware, dict):
@@ -56,14 +49,20 @@ def _architecture(node: dict[str, Any]) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _architecture_evidence(node: dict[str, Any]) -> Any:
+    hardware = node.get("hardware")
+    cpu = hardware.get("cpu") if isinstance(hardware, dict) else None
+    return cpu.get("evidence") if isinstance(cpu, dict) else None
+
+
 def route_task(
     root: Path,
     repository_id: str,
     architecture: str,
     required_roles: tuple[str, ...],
 ) -> RouteResult:
-    nodes_doc = _load_yaml(root / "inventory" / "nodes.yaml")
-    repositories_doc = _load_yaml(root / "inventory" / "repositories.yaml")
+    nodes_doc = load_mapping(root / "inventory" / "nodes.yaml")
+    repositories_doc = load_mapping(root / "inventory" / "repositories.yaml")
 
     repositories = repositories_doc.get("repositories", [])
     repository = next(
@@ -99,16 +98,25 @@ def route_task(
         reasons: list[str] = []
         if node.get("admission_state") != "schedulable":
             reasons.append("node is not schedulable")
+        if not is_direct_evidence(node.get("admission_evidence")):
+            reasons.append("node admission evidence is not directly verified")
         if _architecture(node) != architecture:
             reasons.append("architecture mismatch")
+        elif not is_direct_evidence(_architecture_evidence(node)):
+            reasons.append("architecture evidence is not directly verified")
 
         roles = set(node.get("roles", []))
         role_admission = node.get("role_admission", {})
+        role_evidence = node.get("role_admission_evidence", {})
         for role in combined_roles:
             if role not in roles:
                 reasons.append(f"missing Role: {role}")
             elif not isinstance(role_admission, dict) or role_admission.get(role) != "schedulable":
                 reasons.append(f"Role is not schedulable: {role}")
+            elif not isinstance(role_evidence, dict) or not is_direct_evidence(
+                role_evidence.get(role)
+            ):
+                reasons.append(f"Role admission evidence is not directly verified: {role}")
 
         decisions.append(NodeDecision(node_id, not reasons, tuple(reasons)))
 
