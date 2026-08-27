@@ -74,13 +74,17 @@ def _write_pilot_inputs(tmp_path: Path) -> dict[str, Path]:
     issue.write_text(
         json.dumps(
             {
-                "branch": "codex/15-bounded-pilot",
                 "assignees": ["owner"],
                 "blocked_by": [],
                 "number": 15,
                 "repository": "owner/repository",
                 "state": "OPEN",
                 "status": "verified",
+                "worktree_binding": {
+                    "base": "main",
+                    "branch": "codex/15-bounded-pilot",
+                    "role": "direct",
+                },
             }
         ),
         encoding="utf-8",
@@ -150,6 +154,11 @@ def test_authorized_pilot_records_immutable_worker_and_recovery_evidence(
     assert payload["deployment"]["authorized"] is True
     assert payload["issue_branch"] == "codex/15-bounded-pilot"
     assert payload["issue"] == {
+        "binding": {
+            "base": "main",
+            "branch": "codex/15-bounded-pilot",
+            "role": "direct",
+        },
         "number": 15,
         "repository": "owner/repository",
         "verified": True,

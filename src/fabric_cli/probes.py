@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from fabric_cli.admission import required_checks
-from fabric_cli.evidence import ADMISSION_SCHEMA, new_admission_provenance
+from fabric_cli.evidence import ADMISSION_SCHEMA, new_admission_provenance, source_issue_number
 
 
 @dataclass(frozen=True)
@@ -248,9 +248,9 @@ def _disk_policy_script(encryption_required: bool, minimum_free_bytes: int) -> s
             "import json, shutil, subprocess",
             "source = subprocess.run(['findmnt', '-n', '-o', 'SOURCE', '/'], "
             "check=True, capture_output=True, text=True).stdout.strip().split('[', 1)[0]",
-            "kind = subprocess.run(['lsblk', '-n', '-o', 'TYPE', source], "
-            "check=True, capture_output=True, text=True).stdout.strip().splitlines()[0]",
-            "encrypted = kind == 'crypt' or source.startswith('/dev/mapper/')",
+            "types = subprocess.run(['lsblk', '-s', '-n', '-o', 'TYPE', source], "
+            "check=True, capture_output=True, text=True).stdout.strip().splitlines()",
+            "encrypted = 'crypt' in types",
             f"required = {encryption_required!r}",
             f"minimum = {minimum_free_bytes}",
             "free = shutil.disk_usage('/').free",
@@ -263,7 +263,18 @@ def _disk_policy_script(encryption_required: bool, minimum_free_bytes: int) -> s
     )
 
 
-def _semantic_pass(check_name: str, outputs: tuple[str, ...], os_profile: str) -> bool:
+def _issue_branch_matches_source(branch: str, source_ref: str) -> bool:
+    branch_match = re.fullmatch(r"codex/(\d+)-[a-z0-9][a-z0-9-]*", branch)
+    issue_number = source_issue_number(source_ref)
+    return bool(branch_match and issue_number and int(branch_match.group(1)) == issue_number)
+
+
+def _semantic_pass(
+    check_name: str,
+    outputs: tuple[str, ...],
+    os_profile: str,
+    source_ref: str,
+) -> bool:
     joined = "\n".join(outputs)
     lowered = joined.casefold()
     predicates: dict[str, Callable[[], bool]] = {
@@ -295,7 +306,7 @@ def _semantic_pass(check_name: str, outputs: tuple[str, ...], os_profile: str) -
             and outputs[0] == "true"
             and "/worktrees/" in outputs[1].replace("\\", "/")
             and "/worktrees/" not in outputs[2].replace("\\", "/")
-            and bool(re.fullmatch(r"codex/\d+-[a-z0-9][a-z0-9-]*", outputs[3]))
+            and _issue_branch_matches_source(outputs[3], source_ref)
             and outputs[4] == ""
         ),
         "container_execution": lambda: outputs == ("container-smoke-ok",),
@@ -357,7 +368,12 @@ def collect_observations(
         result = adapter.probe(check_name)
         if result.returncode is None:
             status = "unknown"
-        elif result.returncode != 0 or not _semantic_pass(check_name, result.outputs, os_profile):
+        elif result.returncode != 0 or not _semantic_pass(
+            check_name,
+            result.outputs,
+            os_profile,
+            source_ref,
+        ):
             status = "fail"
         else:
             status = "pass"

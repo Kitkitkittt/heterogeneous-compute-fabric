@@ -117,9 +117,10 @@ uv run fabric admission report `
   --role-profile ROLE_PROFILE `
   --os-profile OS_PROFILE `
   --observations PATH_TO_OBSERVATIONS `
+  --replay-ledger PATH_TO_PRIVATE_REPLAY_LEDGER `
   --view public `
   --format json
 ```
 
-Store a `private` view only in the authorized Private Operations Overlay workflow. Never paste it into a public issue. Public evidence containing host, address, user, path, or contact identity is rejected. The evaluator can admit passed Roles independently; update `admission_evidence` and `role_admission_evidence` in the Public Registry only from its public output plus reviewed evidence. Each schedulable node and Role needs `status: verified`, an observation date no more than 24 hours old, a recognized collector identity, and a public-safe GitHub issue or PR source reference. Old v1 bundles and future-dated or stale v2 bundles cannot authorize admission.
+Store the replay ledger and a `private` view only in the authorized Private Operations Overlay workflow. Never paste either into a public issue. The evaluator atomically consumes each collector-generated observation UUID once; a repeated evaluation fails closed. Public evidence containing host, address, user, path, or contact identity is rejected. The evaluator can admit passed Roles independently; update `admission_evidence` and `role_admission_evidence` in the Public Registry only from its public output plus reviewed evidence. Each schedulable node and Role needs `status: verified`, an observation date no more than 24 hours old, a recognized collector identity, and a public-safe GitHub issue source whose number matches the issue-owned worktree branch. Old v1 bundles and future-dated, stale, or replayed v2 bundles cannot authorize admission.
 

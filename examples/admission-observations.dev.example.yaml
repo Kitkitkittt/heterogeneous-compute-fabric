@@ -2,6 +2,7 @@ schema: heterogeneous-compute-fabric/admission-observations-v2
 node_id: dev-01
 role_profile: workstation
 os_profile: ubuntu24
+observation_id: REPLACE_WITH_COLLECTOR_GENERATED_UUID_V4
 observed_at: REPLACE_WITH_CURRENT_UTC_ISO_TIMESTAMP
 collector: fabric-cli/linux-local-v1
 source_ref: https://github.com/OWNER/REPOSITORY/issues/NUMBER

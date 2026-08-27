@@ -11,6 +11,31 @@ WORKTREE_BINDING = re.compile(
     r"### Worktree binding\s*```json\s*(\{.*?\})\s*```",
     re.DOTALL,
 )
+VALID_BINDING_ROLES = {"direct", "integration", "leaf"}
+
+
+@dataclass(frozen=True)
+class WorktreeBinding:
+    branch: str
+    base: str
+    role: str
+
+    @classmethod
+    def from_value(cls, value: Any) -> WorktreeBinding | None:
+        if not isinstance(value, dict):
+            return None
+        branch = value.get("branch")
+        base = value.get("base")
+        role = value.get("role")
+        if (
+            not isinstance(branch, str)
+            or not branch
+            or not isinstance(base, str)
+            or not base
+            or role not in VALID_BINDING_ROLES
+        ):
+            return None
+        return cls(branch, base, role)
 
 
 def _run_json(command: list[str]) -> Any:
@@ -30,7 +55,7 @@ def _run_json(command: list[str]) -> Any:
         raise ValueError("GitHub issue verification returned invalid JSON") from exc
 
 
-def _bound_branch(body: Any) -> str | None:
+def _worktree_binding(body: Any) -> WorktreeBinding | None:
     if not isinstance(body, str):
         return None
     match = WORKTREE_BINDING.search(body)
@@ -40,8 +65,7 @@ def _bound_branch(body: Any) -> str | None:
         value = json.loads(match.group(1))
     except json.JSONDecodeError:
         return None
-    branch = value.get("branch") if isinstance(value, dict) else None
-    return branch if isinstance(branch, str) else None
+    return WorktreeBinding.from_value(value)
 
 
 class IssueVerifier(Protocol):
@@ -63,20 +87,27 @@ class FixtureIssueVerifier:
         repository = self.evidence.get("repository")
         assignees = self.evidence.get("assignees")
         blocked_by = self.evidence.get("blocked_by")
+        binding = WorktreeBinding.from_value(self.evidence.get("worktree_binding"))
         if (
             self.evidence.get("status") != "verified"
             or self.evidence.get("state") != "OPEN"
             or self.evidence.get("number") != issue_number
-            or self.evidence.get("branch") != issue_branch
+            or binding is None
+            or binding.branch != issue_branch
             or not isinstance(assignees, list)
-            or not assignees
+            or len(assignees) != 1
             or not all(isinstance(assignee, str) and assignee for assignee in assignees)
             or blocked_by != []
             or not isinstance(repository, str)
             or not repository
         ):
             raise ValueError("issue evidence does not verify the issue-owned branch")
-        return {"number": issue_number, "repository": repository, "verified": True}
+        return {
+            "binding": binding.__dict__,
+            "number": issue_number,
+            "repository": repository,
+            "verified": True,
+        }
 
 
 @dataclass(frozen=True)
@@ -104,6 +135,7 @@ class GithubIssueVerifier:
             ]
         )
         assignees = value.get("assignees") if isinstance(value, dict) else None
+        binding = _worktree_binding(value.get("body")) if isinstance(value, dict) else None
         open_blockers = (
             [blocker for blocker in blockers if blocker.get("state", "").casefold() == "open"]
             if isinstance(blockers, list) and all(isinstance(blocker, dict) for blocker in blockers)
@@ -114,10 +146,19 @@ class GithubIssueVerifier:
             or value.get("number") != issue_number
             or value.get("state") != "OPEN"
             or not isinstance(assignees, list)
-            or not assignees
-            or _bound_branch(value.get("body")) != issue_branch
+            or len(assignees) != 1
+            or not isinstance(assignees[0], dict)
+            or not isinstance(assignees[0].get("login"), str)
+            or not assignees[0]["login"]
+            or binding is None
+            or binding.branch != issue_branch
             or open_blockers is None
             or open_blockers
         ):
             raise ValueError("GitHub issue authority does not permit this branch")
-        return {"number": issue_number, "repository": self.repository, "verified": True}
+        return {
+            "binding": binding.__dict__,
+            "number": issue_number,
+            "repository": self.repository,
+            "verified": True,
+        }

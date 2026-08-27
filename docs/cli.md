@@ -64,7 +64,7 @@ uv run fabric admission collect \
 
 The private probe configuration supplies a peer target, SSH destination, expected root-disk encryption policy, and minimum free-space budget from the Private Operations Overlay. The network gate requires a peer ping, a successful key-only SSH login, and key-only daemon policy. Use `--role-profile workstation` for DEV. The collector does not install packages, pull images, or change configuration. It inspects SMART health, encryption/headroom, time synchronization, pending upgrades, firewall state, an issue-owned linked worktree, and a preloaded `busybox:1.36` container before applying Role-specific checks. It also performs bounded CPU, memory, host-GPU, and `--pull=never --rm` GPU-container execution where those gates apply. Browser acceleration is checked through Chromium's GPU diagnostic page, separately from the OpenGL graphics smoke test. Command output is written as `private_evidence`; stdout reports counts only. Zero exit status alone is insufficient: each probe output must satisfy its named semantic contract. Unsupported, unavailable, timed-out, or semantically incomplete probes remain gated. The `fixture` adapter and `--probe-results` exist for deterministic tests and do not contact a machine.
 
-Admission observations use the fail-closed v2 schema. Collection records the UTC observation time, the adapter identity, and the public GitHub issue or PR supplied by `--source-ref`. Evaluation rejects v1 bundles, missing or malformed provenance, observations older than 24 hours, timestamps more than five minutes in the future, private identities, and non-GitHub source references.
+Admission observations use the fail-closed v2 schema. Collection records a one-time UUID, the UTC observation time, the adapter identity, and the public GitHub issue supplied by `--source-ref`. The issue number must match the issue-owned `codex/<issue>-...` worktree branch. Evaluation rejects v1 bundles, missing or malformed provenance, observations older than 24 hours, any future timestamp, private identities, and non-issue source references.
 
 `profile_upgrade_path` is intentionally manual-only for `pop24`; the collector emits `unknown`. Before evaluation, a human reviews the versioned Pop!_OS upgrade/recovery guidance, records the reviewed source and date in `private_evidence`, and changes only that check to `pass`. Without that handoff every Pop!_OS workstation Role stays gated.
 
@@ -78,10 +78,11 @@ uv run fabric admission report `
   --role-profile compute `
   --os-profile ubuntu24 `
   --observations PATH_TO_OBSERVATIONS `
+  --replay-ledger PATH_TO_PRIVATE_REPLAY_LEDGER `
   --view public
 ```
 
-Node Slot, reusable Role profile, and OS Profile are separate inputs. A future `compute-02` can reuse `--role-profile compute`; a workstation uses `--role-profile workstation`. The default `public` view emits only controlled check/status summaries, never caller-authored evidence or `private_evidence`; obvious private identity in a public-evidence input is also rejected. `--view private` is an explicit operator action and its output must stay in the Private Operations Overlay workflow.
+Node Slot, reusable Role profile, and OS Profile are separate inputs. A future `compute-02` can reuse `--role-profile compute`; a workstation uses `--role-profile workstation`. The replay ledger is persistent private control state: the evaluator atomically claims the collector-generated observation UUID, and a second evaluation of that UUID fails closed. The default `public` view emits only controlled check/status summaries, never caller-authored evidence or `private_evidence`; obvious private identity in a public-evidence input is also rejected. `--view private` is an explicit operator action and its output must stay in the Private Operations Overlay workflow.
 
 CPU execution, memory execution, and CUDA are independent gates. The command can admit CPU work while keeping RAM and CUDA gated, or keep a Pop!_OS workstation gated until its profile-specific policies pass.
 

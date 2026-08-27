@@ -58,6 +58,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     admission_report.add_argument("--os-profile", choices=("ubuntu24", "pop24"), required=True)
     admission_report.add_argument("--observations", type=Path, required=True)
+    admission_report.add_argument("--replay-ledger", type=Path, required=True)
     admission_report.add_argument("--view", choices=("public", "private"), default="public")
     admission_report.add_argument("--format", choices=("human", "json"), default="human")
     admission_collect = admission_subparsers.add_parser(
@@ -205,6 +206,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.role_profile,
                 args.os_profile,
                 args.observations.resolve(),
+                args.replay_ledger.resolve(),
                 args.view,
             )
         except (OSError, ValueError, yaml.YAMLError) as exc:

@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from conftest import parse_json_output
 from test_admission_compute_cli import BASE_CHECKS
@@ -46,6 +47,7 @@ def _write_dev_observations(path: Path, os_profile: str, include_pop_gate: bool)
                 "node_id": "dev-01",
                 "role_profile": "workstation",
                 "os_profile": os_profile,
+                "observation_id": str(uuid4()),
                 "observed_at": datetime.now(UTC).isoformat(),
                 "collector": "fabric-cli/fixture-v1",
                 "source_ref": "https://github.com/owner/repository/issues/13",
@@ -74,6 +76,8 @@ def test_dev_report_admits_a_complete_ubuntu_workstation(
         "ubuntu24",
         "--observations",
         str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
         "--format",
         "json",
     )
@@ -108,6 +112,8 @@ def test_pop_workstation_stays_gated_without_its_profile_specific_policy(
         "pop24",
         "--observations",
         str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
         "--format",
         "json",
     )

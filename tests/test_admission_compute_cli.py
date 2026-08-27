@@ -4,8 +4,11 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from conftest import parse_json_output
+
+from fabric_cli.probes import _disk_policy_script, _issue_branch_matches_source
 
 BASE_CHECKS = [
     "hardware",
@@ -31,6 +34,25 @@ COMPUTE_CHECKS = [
 ]
 
 
+def test_worktree_source_and_encryption_probes_fail_closed() -> None:
+    assert _issue_branch_matches_source(
+        "codex/12-compute-admission",
+        "https://github.com/owner/repository/issues/12",
+    )
+    assert not _issue_branch_matches_source(
+        "codex/12-compute-admission",
+        "https://github.com/owner/repository/issues/13",
+    )
+    assert not _issue_branch_matches_source(
+        "codex/12-compute-admission",
+        "https://github.com/owner/repository/pull/12",
+    )
+    script = _disk_policy_script(True, 1)
+    assert "['lsblk', '-s', '-n', '-o', 'TYPE', source]" in script
+    assert "encrypted = 'crypt' in types" in script
+    assert "source.startswith('/dev/mapper/')" not in script
+
+
 def _write_compute_observations(path: Path, node_id: str = "compute-02") -> str:
     private_value = "private-device-and-route-detail"
     checks = {
@@ -50,6 +72,7 @@ def _write_compute_observations(path: Path, node_id: str = "compute-02") -> str:
                 "node_id": node_id,
                 "role_profile": "compute",
                 "os_profile": "ubuntu24",
+                "observation_id": str(uuid4()),
                 "observed_at": datetime.now(UTC).isoformat(),
                 "collector": "fabric-cli/fixture-v1",
                 "source_ref": "https://github.com/owner/repository/issues/12",
@@ -82,6 +105,8 @@ def test_compute_report_scales_to_a_new_slot_and_gates_cpu_ram_and_cuda_independ
         "ubuntu24",
         "--observations",
         str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
         "--view",
         "public",
         "--format",
@@ -124,6 +149,8 @@ def test_private_compute_report_requires_an_explicit_view(
         "ubuntu24",
         "--observations",
         str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
         "--view",
         "private",
         "--format",
@@ -158,6 +185,8 @@ def test_public_report_rejects_caller_supplied_private_identity(
         "ubuntu24",
         "--observations",
         str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
         "--view",
         "public",
         "--format",
@@ -194,6 +223,8 @@ def test_public_report_uses_controlled_summaries_instead_of_caller_text(
         "ubuntu24",
         "--observations",
         str(observations),
+        "--replay-ledger",
+        str(tmp_path / "replay-ledger"),
         "--view",
         "public",
         "--format",
@@ -219,6 +250,7 @@ def test_admission_report_rejects_missing_stale_future_or_private_provenance(
             ),
         ),
         ("missing", lambda document: document.pop("observed_at")),
+        ("missing-id", lambda document: document.pop("observation_id")),
         ("collector", lambda document: document.__setitem__("collector", "not valid")),
         (
             "stale",
@@ -229,7 +261,7 @@ def test_admission_report_rejects_missing_stale_future_or_private_provenance(
         (
             "future",
             lambda document: document.__setitem__(
-                "observed_at", (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+                "observed_at", (datetime.now(UTC) + timedelta(minutes=1)).isoformat()
             ),
         ),
         (
@@ -257,12 +289,49 @@ def test_admission_report_rejects_missing_stale_future_or_private_provenance(
             "ubuntu24",
             "--observations",
             str(observations),
+            "--replay-ledger",
+            str(tmp_path / "replay-ledger"),
             "--format",
             "json",
         )
 
         assert result.returncode == 1, name
         assert json.loads(result.stdout)["ok"] is False
+
+
+def test_admission_report_consumes_each_observation_id_once(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    observations = tmp_path / "compute-observations.json"
+    replay_ledger = tmp_path / "replay-ledger"
+    _write_compute_observations(observations)
+    command = (
+        "admission",
+        "report",
+        "--node-id",
+        "compute-02",
+        "--role-profile",
+        "compute",
+        "--os-profile",
+        "ubuntu24",
+        "--observations",
+        str(observations),
+        "--replay-ledger",
+        str(replay_ledger),
+        "--format",
+        "json",
+    )
+
+    first = run_fabric(*command)
+    replay = run_fabric(*command)
+
+    assert first.returncode == 0
+    assert replay.returncode == 1
+    assert parse_json_output(replay) == {
+        "error": "admission observation provenance has already been consumed",
+        "ok": False,
+    }
 
 
 def test_fixture_probe_adapter_collects_private_results_without_printing_them(
@@ -357,6 +426,7 @@ def test_fixture_probe_adapter_collects_private_results_without_printing_them(
     assert collected["checks"]["hardware"]["status"] == "pass"
     assert secret_detail in collected["checks"]["hardware"]["private_evidence"]
     assert collected["collector"] == "fabric-cli/fixture-v1"
+    assert collected["observation_id"]
     assert collected["source_ref"] == "https://github.com/owner/repository/issues/12"
     assert collected["observed_at"].endswith("+00:00")
 

@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from fabric_cli.evidence import ADMISSION_SCHEMA, AdmissionProvenance, parse_admission_provenance
+from fabric_cli.evidence import (
+    ADMISSION_SCHEMA,
+    AdmissionProvenance,
+    claim_admission_provenance,
+    parse_admission_provenance,
+)
 from fabric_cli.io import load_mapping
 from fabric_cli.safety import contains_private_identity
 
@@ -167,6 +172,7 @@ def generate_admission_report(
     role_profile: str,
     os_profile: str,
     observations_path: Path,
+    replay_ledger: Path,
     view: ReportView,
 ) -> AdmissionReport:
     document = load_mapping(observations_path, "observations")
@@ -204,7 +210,7 @@ def generate_admission_report(
     else:
         node_admission = "installed"
 
-    return AdmissionReport(
+    report = AdmissionReport(
         node_id,
         role_profile,
         os_profile,
@@ -214,3 +220,5 @@ def generate_admission_report(
         provenance,
         view,
     )
+    claim_admission_provenance(provenance, replay_ledger)
+    return report

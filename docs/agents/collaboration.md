@@ -45,6 +45,8 @@ Node suitability, current admission, and task ownership are independent:
 3. The Repository Contract describes architecture, Roles, eligible Node Slots, bootstrap, and verification.
 4. `fabric route` intersects those contracts. An empty result is a blocker, not permission to select a node manually.
 
+Admission collection must run from the clean linked worktree bound to the controlling issue. Its public source reference is that GitHub issue, and the issue number must match the `codex/<issue>-...` branch. Admission evaluation uses a persistent private replay ledger so each collector-generated observation UUID can authorize at most one report. This admission evidence does not replace task authority: live execution still requires exactly one accountable assignee, no open native blockers, and a complete valid Worktree binding (`branch`, `base`, and `role`).
+
 Adding a Node Slot requires a new stable ID, task label, hardware/evidence record, Role admission state, and private mapping. Existing issues, Role Profiles, and collaboration rules remain unchanged.
 
 ## Public handoff record
