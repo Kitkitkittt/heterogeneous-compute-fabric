@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from fabric_cli.admission import generate_admission_report
+from fabric_cli.frontier import FileIssueSource, GithubIssueSource, build_frontier
 from fabric_cli.overlay import validate_overlay
 from fabric_cli.routing import route_task
 from fabric_cli.validation import validate_public_registry
@@ -46,6 +47,13 @@ def _parser() -> argparse.ArgumentParser:
     admission_report.add_argument("--observations", type=Path, required=True)
     admission_report.add_argument("--view", choices=("public", "private"), default="public")
     admission_report.add_argument("--format", choices=("human", "json"), default="human")
+
+    frontier = subparsers.add_parser("frontier", help="report the actionable issue frontier")
+    frontier.add_argument("--root", type=Path, default=Path.cwd())
+    frontier_source = frontier.add_mutually_exclusive_group(required=True)
+    frontier_source.add_argument("--issues-file", type=Path)
+    frontier_source.add_argument("--repository")
+    frontier.add_argument("--format", choices=("human", "json"), default="human")
     return parser
 
 
@@ -79,6 +87,18 @@ def _render_overlay_human(payload: dict[str, Any]) -> str:
 def _render_admission_human(payload: dict[str, Any]) -> str:
     lines = [f"{payload['node_id']} admission: {payload['node_admission']}"]
     lines.extend(f"- {role}: {state}" for role, state in payload["role_admission"].items())
+    return "\n".join(lines)
+
+
+def _render_frontier_human(payload: dict[str, Any]) -> str:
+    lines = ["Actionable frontier"]
+    for issue in payload["frontier"]:
+        nodes = ", ".join(issue["suitable_nodes"]) or "no node label"
+        lines.append(f"- #{issue['number']} [{issue['next_actor']}] {issue['title']} ({nodes})")
+        lines.extend(
+            f"  - {conflict['node_id']}: {conflict['admission_state']}"
+            for conflict in issue["node_conflicts"]
+        )
     return "\n".join(lines)
 
 
@@ -143,4 +163,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             else _render_admission_human(payload)
         )
         return 0 if admission_report.ok else 1
+    if args.command == "frontier":
+        try:
+            source = (
+                FileIssueSource(args.issues_file.resolve())
+                if args.issues_file is not None
+                else GithubIssueSource(args.repository)
+            )
+            frontier_report = build_frontier(args.root.resolve(), source)
+        except (OSError, ValueError, json.JSONDecodeError, yaml.YAMLError) as exc:
+            payload = {"error": str(exc), "frontier": [], "ok": False}
+            print(json.dumps(payload, sort_keys=True) if args.format == "json" else str(exc))
+            return 1
+        payload = frontier_report.as_dict()
+        print(
+            json.dumps(payload, sort_keys=True)
+            if args.format == "json"
+            else _render_frontier_human(payload)
+        )
+        return 0
     raise AssertionError(f"unhandled command: {args.command}")
