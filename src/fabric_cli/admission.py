@@ -35,9 +35,57 @@ PROFILE_ROLES: dict[str, dict[str, tuple[str, ...]]] = {
             "container_toolkit",
             "gpu_container_smoke",
         ),
-    }
+    },
+    "dev-01": {
+        "interactive-development": (
+            "displays",
+            "browser_acceleration",
+            "suspend_resume",
+            "shutdown_reboot",
+            "ethernet",
+            "wifi",
+            "bluetooth",
+            "audio",
+            "usb",
+            "editor_toolchain",
+            "containers",
+            "graphics_smoke",
+        ),
+        "control": (
+            "displays",
+            "browser_acceleration",
+            "suspend_resume",
+            "shutdown_reboot",
+            "ethernet",
+            "wifi",
+            "bluetooth",
+            "audio",
+            "usb",
+            "editor_toolchain",
+            "containers",
+            "graphics_smoke",
+        ),
+        "light-test": (
+            "displays",
+            "browser_acceleration",
+            "suspend_resume",
+            "shutdown_reboot",
+            "ethernet",
+            "wifi",
+            "bluetooth",
+            "audio",
+            "usb",
+            "editor_toolchain",
+            "containers",
+            "graphics_smoke",
+        ),
+    },
 }
-ALLOWED_OS_PROFILES: dict[str, tuple[str, ...]] = {"compute-01": ("ubuntu24",)}
+ALLOWED_OS_PROFILES: dict[str, tuple[str, ...]] = {
+    "compute-01": ("ubuntu24",),
+    "dev-01": ("ubuntu24", "pop24"),
+}
+POP_PROFILE_CHECKS = ("secure_boot_policy", "profile_upgrade_path")
 
 
 @dataclass(frozen=True)
@@ -101,10 +149,16 @@ def _load_mapping(path: Path) -> dict[str, Any]:
     return value
 
 
-def _required_checks(profile: str) -> tuple[str, ...]:
-    roles = PROFILE_ROLES.get(profile)
-    if roles is None:
+def _role_requirements(profile: str, os_profile: str) -> dict[str, tuple[str, ...]]:
+    base_roles = PROFILE_ROLES.get(profile)
+    if base_roles is None:
         raise ValueError(f"unknown admission profile: {profile}")
+    if profile == "dev-01" and os_profile == "pop24":
+        return {role: (*checks, *POP_PROFILE_CHECKS) for role, checks in base_roles.items()}
+    return base_roles
+
+
+def _required_checks(roles: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
     return tuple(
         dict.fromkeys([*BASE_CHECKS, *(check for checks in roles.values() for check in checks)])
     )
@@ -138,18 +192,20 @@ def generate_admission_report(
     node_id = document.get("node_id")
     if node_id != profile:
         raise ValueError("observation Node Slot does not match the selected profile")
-    if document.get("os_profile") not in ALLOWED_OS_PROFILES.get(profile, ()):
+    os_profile = document.get("os_profile")
+    if not isinstance(os_profile, str) or os_profile not in ALLOWED_OS_PROFILES.get(profile, ()):
         raise ValueError("OS Profile is not allowed for the selected Node Slot")
     values = document.get("checks")
     if not isinstance(values, dict):
         raise ValueError("observations checks must be a mapping")
 
-    observations = tuple(_observation(name, values) for name in _required_checks(profile))
+    roles = _role_requirements(profile, os_profile)
+    observations = tuple(_observation(name, values) for name in _required_checks(roles))
     statuses = {observation.name: observation.status for observation in observations}
     base_passed = all(statuses[name] == "pass" for name in BASE_CHECKS)
 
     role_admission: dict[str, str] = {}
-    for role, role_checks in PROFILE_ROLES[profile].items():
+    for role, role_checks in roles.items():
         role_admission[role] = (
             "schedulable"
             if base_passed and all(statuses[name] == "pass" for name in role_checks)
