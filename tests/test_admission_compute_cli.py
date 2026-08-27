@@ -84,6 +84,27 @@ def _write_compute_observations(path: Path, node_id: str = "compute-02") -> str:
     return private_value
 
 
+def _write_issue_evidence(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "assignees": ["owner"],
+                "blocked_by": [],
+                "number": 12,
+                "repository": "owner/repository",
+                "state": "OPEN",
+                "status": "verified",
+                "worktree_binding": {
+                    "base": "main",
+                    "branch": "codex/12-compute-admission",
+                    "role": "direct",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_compute_report_scales_to_a_new_slot_and_gates_cpu_ram_and_cuda_independently(
     tmp_path: Path,
     run_fabric: Any,
@@ -334,11 +355,46 @@ def test_admission_report_consumes_each_observation_id_once(
     }
 
 
+def test_admission_report_rejects_a_replay_ledger_inside_the_public_worktree(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    observations = tmp_path / "compute-observations.json"
+    forbidden_ledger = Path.cwd() / f".test-replay-ledger-{uuid4()}"
+    _write_compute_observations(observations)
+
+    result = run_fabric(
+        "admission",
+        "report",
+        "--node-id",
+        "compute-02",
+        "--role-profile",
+        "compute",
+        "--os-profile",
+        "ubuntu24",
+        "--observations",
+        str(observations),
+        "--replay-ledger",
+        str(forbidden_ledger),
+        "--format",
+        "json",
+    )
+
+    assert result.returncode == 1
+    assert parse_json_output(result) == {
+        "error": "private replay ledger must be outside the current worktree",
+        "ok": False,
+    }
+    assert not forbidden_ledger.exists()
+
+
 def test_fixture_probe_adapter_collects_private_results_without_printing_them(
     tmp_path: Path,
     run_fabric: Any,
 ) -> None:
     probe_results = tmp_path / "probe-results.json"
+    issue_evidence = tmp_path / "issue-evidence.json"
+    _write_issue_evidence(issue_evidence)
     secret_detail = "private-machine-observation"
     pass_outputs = {
         "hardware": ["Architecture: x86_64", "Mem: 48000000000"],
@@ -405,6 +461,8 @@ def test_fixture_probe_adapter_collects_private_results_without_printing_them(
         "fixture",
         "--probe-results",
         str(probe_results),
+        "--issue-evidence",
+        str(issue_evidence),
         "--source-ref",
         "https://github.com/owner/repository/issues/12",
         "--output",
@@ -436,6 +494,8 @@ def test_zero_exit_docker_info_does_not_pass_the_gpu_container_smoke(
     run_fabric: Any,
 ) -> None:
     probe_results = tmp_path / "probe-results.json"
+    issue_evidence = tmp_path / "issue-evidence.json"
+    _write_issue_evidence(issue_evidence)
     probe_results.write_text(
         json.dumps(
             {
@@ -463,6 +523,8 @@ def test_zero_exit_docker_info_does_not_pass_the_gpu_container_smoke(
         "fixture",
         "--probe-results",
         str(probe_results),
+        "--issue-evidence",
+        str(issue_evidence),
         "--source-ref",
         "https://github.com/owner/repository/issues/12",
         "--output",

@@ -18,5 +18,5 @@ All notable changes to the fabric control plane are recorded here.
 ### Fixed
 
 - Admission observations now require a one-time UUID, fresh non-future UTC provenance, a collector identity, an issue-matched public GitHub source, and atomic replay-ledger consumption before any Role can become schedulable.
-- Pilot issue authority now requires exactly one assignee, a complete valid Worktree binding with an exact branch match, and no open native blockers.
+- Admission collection and pilot execution now require exactly one assignee, a complete valid Worktree binding with an exact branch match, and no open native blockers; deterministic collection uses the same fixture contract.
 - Base admission now checks disk encryption/headroom policy, time synchronization, pending upgrades, firewall state, linked issue-worktree identity, and real container execution.

@@ -14,13 +14,21 @@ ADMISSION_SCHEMA = "heterogeneous-compute-fabric/admission-observations-v2"
 MAX_ADMISSION_AGE = timedelta(hours=24)
 COLLECTOR_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._+-]*$")
 PUBLIC_SOURCE_REF = re.compile(
-    r"^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/issues/(?P<issue>\d+)(?:#.*)?$"
+    r"^https://github\.com/(?P<owner>[A-Za-z0-9_.-]+)/(?P<repository>[A-Za-z0-9_.-]+)/"
+    r"issues/(?P<issue>\d+)(?:#.*)?$"
 )
 
 
-def source_issue_number(source_ref: str) -> int | None:
+def source_issue_reference(source_ref: str) -> tuple[str, int] | None:
     match = PUBLIC_SOURCE_REF.fullmatch(source_ref)
-    return int(match.group("issue")) if match is not None else None
+    if match is None:
+        return None
+    return f"{match.group('owner')}/{match.group('repository')}", int(match.group("issue"))
+
+
+def source_issue_number(source_ref: str) -> int | None:
+    reference = source_issue_reference(source_ref)
+    return reference[1] if reference is not None else None
 
 
 @dataclass(frozen=True)

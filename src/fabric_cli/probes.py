@@ -9,7 +9,13 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from fabric_cli.admission import required_checks
-from fabric_cli.evidence import ADMISSION_SCHEMA, new_admission_provenance, source_issue_number
+from fabric_cli.evidence import (
+    ADMISSION_SCHEMA,
+    new_admission_provenance,
+    source_issue_number,
+    source_issue_reference,
+)
+from fabric_cli.issues import IssueVerifier
 
 
 @dataclass(frozen=True)
@@ -361,8 +367,13 @@ def collect_observations(
     adapter: ProbeAdapter,
     output_path: Path,
     source_ref: str,
+    issue_verifier: IssueVerifier,
 ) -> dict[str, Any]:
     provenance = new_admission_provenance(adapter.collector_id, source_ref)
+    issue_reference = source_issue_reference(source_ref)
+    if issue_reference is None:
+        raise ValueError("admission provenance requires a public-safe GitHub issue source")
+    source_repository, source_issue = issue_reference
     checks: dict[str, Any] = {}
     for check_name in required_checks(role_profile, os_profile):
         result = adapter.probe(check_name)
@@ -375,6 +386,13 @@ def collect_observations(
             source_ref,
         ):
             status = "fail"
+        elif check_name == "git_worktree":
+            try:
+                authority = issue_verifier.verify(source_issue, result.outputs[3])
+            except ValueError:
+                status = "fail"
+            else:
+                status = "pass" if authority.get("repository") == source_repository else "fail"
         else:
             status = "pass"
         private_evidence = "\n".join((*result.outputs, result.stderr)).strip()
