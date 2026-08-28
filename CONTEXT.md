@@ -12,11 +12,11 @@ A stable logical identity for a capacity role, expressed as `<purpose>-<ordinal>
 
 ### Node Archetype
 
-A reusable specification of responsibilities, required capabilities, exclusions, and admission criteria. An archetype describes a class of nodes, not a real machine.
+A reusable specification of responsibilities, required capabilities, exclusions, and admission criteria. A current Node Slot may publish a sanitized hardware summary while retaining the archetype's reusable contract.
 
 ### Hardware Assignment
 
-The physical machine or virtual allocation privately assigned to a Node Slot. Hardware can change without renaming the slot when its purpose remains stable.
+The physical machine or virtual allocation assigned to a Node Slot. Public documentation may summarize CPU, memory, accelerator, and storage capacity. Hostnames, addresses, users, ownership, access paths, and live operational data remain private. Hardware can change without renaming the slot when its purpose remains stable.
 
 ### Installation
 
@@ -48,7 +48,7 @@ A content-addressed or versioned output that can move between nodes without shar
 
 ### Public Concept Repository
 
-This repository. It contains architecture, archetypes, diagrams, terminology, and decisions, but no live infrastructure state or implementation.
+This repository. It contains architecture, archetypes, sanitized hardware summaries, diagrams, terminology, and decisions, but no live infrastructure state or implementation.
 
 ### Private Implementation Plane
 
@@ -61,4 +61,4 @@ Access-controlled systems containing source code, machine assignments, operation
 - Connectivity does not imply authorization, compatibility, capacity, or readiness.
 - Source moves through version control; outputs move as immutable artifacts.
 - Deployment consumes reviewed, immutable inputs rather than another node's working directory.
-- Public documentation never names private repository locations or live infrastructure identifiers.
+- Public documentation may publish sanitized capacity but never names private repository locations, access identities, credentials, API keys, service inventory, or live infrastructure identifiers.

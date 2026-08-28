@@ -1,12 +1,16 @@
 # Node specifications
 
-These specifications define public node archetypes. They intentionally omit real hardware, software versions, admission state, ownership, and access data.
+These specifications combine reusable node archetypes with public-safe hardware summaries for the current assignments. Hostnames, addresses, users, credentials, API keys, services, access paths, live utilization, and recovery data remain private.
 
-## Development/control node
+## `dev-01` — Development/control
 
-**Logical series:** `dev-N`
-
-**Purpose:** Provide the human-facing workspace and coordination point for the fabric.
+| Resource | Public specification |
+| --- | --- |
+| CPU | AMD Ryzen 7 7840S, 8 cores / 16 threads, x86_64 |
+| Memory | 32 GiB LPDDR5-6400 |
+| Graphics | AMD Radeon 780M integrated GPU with shared system memory |
+| Storage | 1 TB NVMe + 500 GB USB disk |
+| Primary role | Interactive development, coordination, review, and short feedback loops |
 
 **Responsibilities**
 
@@ -14,13 +18,6 @@ These specifications define public node archetypes. They intentionally omit real
 - work planning, source-control coordination, and task dispatch;
 - lightweight local validation;
 - observing results returned by other node roles.
-
-**Capability contract**
-
-- responsive interactive environment;
-- source-control and secure remote-execution clients;
-- enough local capacity for coordination and bounded tests;
-- access to approved external or local inference endpoints when required.
 
 **Exclusions**
 
@@ -35,11 +32,15 @@ These specifications define public node archetypes. They intentionally omit real
 - remote connections use approved private mappings;
 - current capacity supports an interactive session.
 
-## Compute node
+## `compute-01` — Compute
 
-**Logical series:** `compute-N`
-
-**Purpose:** Execute bounded CPU, memory, accelerator, build, test, inference, and batch workloads.
+| Resource | Public specification |
+| --- | --- |
+| CPU | Intel Core i5-12400F, 6 cores / 12 threads, x86_64 |
+| Memory | 48 GB |
+| Accelerator | NVIDIA RTX 4060 Ti, 16 GB dedicated VRAM |
+| Storage | 500 GB NVMe SSD + 2 TB HDD |
+| Primary role | CPU/RAM builds, CUDA, inference, testing, and batch work |
 
 **Responsibilities**
 
@@ -47,13 +48,6 @@ These specifications define public node archetypes. They intentionally omit real
 - memory-intensive data preparation and indexing;
 - accelerator workloads when the requested runtime is supported;
 - production of immutable artifacts and execution evidence.
-
-**Capability contract**
-
-- declared CPU architecture and resource envelope;
-- optional accelerator described as an independent capability lane;
-- reproducible execution environment;
-- bounded resource use, health reporting, and artifact output.
 
 **Exclusions**
 
@@ -68,24 +62,21 @@ These specifications define public node archetypes. They intentionally omit real
 - accelerator host and container checks pass before accelerator admission;
 - execution starts from an isolated checkout or immutable input.
 
-## Cloud node
+## `cloud-01` — Cloud
 
-**Logical series:** `cloud-N`
-
-**Purpose:** Supply remote, elastic, or architecture-specific capacity without coupling workflows to a provider.
+| Resource | Public specification |
+| --- | --- |
+| CPU | ARM64 Neoverse-N1-class allocation, 4 OCPUs |
+| Memory | 24 GB |
+| Accelerator | None declared |
+| Storage | 50 GB-class boot volume |
+| Primary role | ARM64 builds, bounded agents, and auxiliary workloads |
 
 **Responsibilities**
 
 - architecture-compatible builds, tests, and bounded agents;
 - temporary capacity for workloads that fit the declared cost and data policy;
-- auxiliary services with explicit ownership and recovery requirements.
-
-**Capability contract**
-
-- declared processor architecture and resource allocation;
-- explicit cost, quota, region, and data-handling policy in private records;
-- reproducible bootstrap and teardown path;
-- immutable input and output exchange.
+- auxiliary workloads with explicit ownership and recovery requirements.
 
 **Exclusions**
 
@@ -100,11 +91,15 @@ These specifications define public node archetypes. They intentionally omit real
 - credentials are externally managed and least-privileged;
 - teardown and data-retention behavior are defined.
 
-## Deployment/data node
+## `deploy-01` — Deployment/data
 
-**Logical series:** `deploy-N`
-
-**Purpose:** Host persistent services, staging workloads, databases, storage, and deployment health checks.
+| Resource | Public specification |
+| --- | --- |
+| CPU | Intel Core i5-6300HQ, 4 cores / 4 threads, x86_64 |
+| Memory | 23 GiB visible |
+| Graphics | NVIDIA GTX 960M 2 GB + Intel HD 530 |
+| Storage | 512 GB NVMe + 1 TB USB SSD + 4 TB USB HDD |
+| Primary role | Persistent services, databases, staging, artifacts, and storage |
 
 **Responsibilities**
 
@@ -112,13 +107,6 @@ These specifications define public node archetypes. They intentionally omit real
 - preserve service and data continuity;
 - expose health, backup, restore, and rollback evidence;
 - retain owned artifacts according to policy.
-
-**Capability contract**
-
-- stable service runtime and durable storage roles;
-- explicit resource budgets and workload ownership;
-- backup, restore, retention, and rollback procedures;
-- isolation between serving workloads and maintenance work.
 
 **Exclusions**
 
@@ -136,3 +124,7 @@ These specifications define public node archetypes. They intentionally omit real
 ## Role composition
 
 A physical or virtual machine may satisfy more than one archetype, but each role is admitted independently. Combining roles is a private deployment decision and must not weaken the stricter role's capacity, isolation, recovery, or security requirements.
+
+## Evaluation status
+
+Hardware totals are nominal inventory. Comparable CPU, memory, storage, GPU, thermal, network, and end-to-end workload benchmarks are **coming soon**.

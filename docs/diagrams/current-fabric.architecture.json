@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Heterogeneous Compute Fabric",
+    "quality_profile": "showcase",
+    "viewBox": [1380, 820],
+    "views": [
+      {
+        "id": "source-to-service",
+        "label": "Source to service",
+        "focus": ["request", "dev", "source", "compute", "artifacts", "deploy"],
+        "note": "Follow reviewed source through development, execution, immutable outputs, and deployment."
+      },
+      {
+        "id": "node-fleet",
+        "label": "Node fleet",
+        "focus": ["dev", "compute", "cloud", "deploy"],
+        "note": "Compare the four real node assignments and their distinct workload roles."
+      }
+    ]
+  },
+  "components": [
+    { "id": "request", "type": "external", "label": "Work request", "sublabel": "capabilities + acceptance", "pos": [50, 300], "size": [170, 78] },
+    { "id": "dev", "type": "frontend", "label": "dev-01", "sublabel": "Ryzen 7 7840S · 32 GiB · Radeon 780M", "tag": "interactive control", "pos": [260, 270], "size": [240, 138] },
+    { "id": "source", "type": "messagebus", "label": "Versioned source", "sublabel": "reviewed commits", "pos": [550, 300], "size": [200, 78] },
+    { "id": "compute", "type": "backend", "label": "compute-01", "sublabel": "Core i5-12400F · 48 GB · RTX 4060 Ti 16 GB", "tag": "CPU · RAM · CUDA", "pos": [800, 105], "size": [270, 138] },
+    { "id": "cloud", "type": "cloud", "label": "cloud-01", "sublabel": "4 ARM OCPUs · 24 GB · 50 GB-class volume", "tag": "ARM64 remote capacity", "pos": [800, 300], "size": [270, 138] },
+    { "id": "artifacts", "type": "database", "label": "Immutable artifacts", "sublabel": "images · reports · datasets", "pos": [1110, 300], "size": [220, 78] },
+    { "id": "deploy", "type": "backend", "label": "deploy-01", "sublabel": "Core i5-6300HQ · 23 GiB · GTX 960M 2 GB", "tag": "services · data · staging", "pos": [800, 500], "size": [270, 138] },
+    { "id": "storage", "type": "database", "label": "Durable storage", "sublabel": "512 GB NVMe · 1 TB SSD · 4 TB HDD", "pos": [1110, 530], "size": [220, 78] },
+    { "id": "operations", "type": "security", "label": "Private operations plane", "sublabel": "access · configuration · evidence", "tag": "no secrets in public docs", "pos": [550, 665], "size": [250, 110] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Public capability map", "wraps": ["dev", "source", "compute", "cloud", "artifacts", "deploy", "storage"], "pad": 34 },
+    { "kind": "security-group", "label": "Access-controlled operations", "wraps": ["operations"], "pad": 24 }
+  ],
+  "connections": [
+    { "id": "request-dev", "from": "request", "to": "dev", "label": "plan", "variant": "emphasis" },
+    { "id": "dev-source", "from": "dev", "to": "source" },
+    { "id": "source-compute", "from": "source", "to": "compute" },
+    { "id": "source-cloud", "from": "source", "to": "cloud" },
+    { "id": "source-deploy", "from": "source", "to": "deploy", "label": "reviewed release", "variant": "emphasis", "labelAt": [775, 470] },
+    { "id": "compute-artifacts", "from": "compute", "to": "artifacts" },
+    { "id": "cloud-artifacts", "from": "cloud", "to": "artifacts" },
+    { "id": "artifacts-deploy", "from": "artifacts", "to": "deploy", "label": "immutable input", "variant": "emphasis", "labelAt": [1090, 470] },
+    { "id": "deploy-storage", "from": "deploy", "to": "storage" },
+    { "id": "operations-source", "from": "operations", "to": "source", "label": "operational mapping", "variant": "dashed", "fromSide": "top", "toSide": "bottom" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Route by capability", "items": ["Interactive work stays responsive", "CPU, RAM, CUDA, and ARM64 are independent constraints"] },
+    { "dot": "emerald", "title": "Move immutable outputs", "items": ["Git carries reviewed source", "Artifact storage carries build and deployment inputs"] },
+    { "dot": "violet", "title": "Keep operations private", "items": ["Public hardware specs support planning", "Access identities, credentials, and live evidence stay restricted"] }
+  ]
+}

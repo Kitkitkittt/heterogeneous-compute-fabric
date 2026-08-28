@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Capability-Aware Workload Routing",
+    "quality_profile": "showcase",
+    "viewBox": [1180, 680],
+    "views": [
+      { "id": "happy-path", "label": "Request to result", "focus": ["request", "contract", "select", "admission", "execute", "accept", "publish"], "note": "Follow a valid workload from declared requirements to an accepted result." },
+      { "id": "fail-closed", "label": "Fail-closed gates", "focus": ["contract", "contract_blocked", "admission", "candidate_blocked", "accept", "rework"], "note": "See every point where incomplete or unsafe work stops before publication." }
+    ]
+  },
+  "lanes": [
+    { "id": "control", "label": "Control plane" },
+    { "id": "fleet", "label": "Eligible node" },
+    { "id": "evidence", "label": "Evidence + result" },
+    { "id": "blocked", "label": "Fail-closed paths", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "declare", "label": "Declare", "fromCol": 0, "toCol": 1 },
+    { "id": "route", "label": "Select + admit", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "deliver", "label": "Execute + accept", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["request", "contract", "select", "admission", "execute", "accept", "publish"],
+  "nodes": [
+    { "id": "request", "lane": "control", "col": 0, "type": "external", "label": "Work request", "sublabel": "intent + outcome" },
+    { "id": "contract", "lane": "control", "col": 1, "type": "security", "label": "Needs", "width": 64 },
+    { "id": "select", "lane": "control", "col": 2, "type": "backend", "label": "Route", "width": 64 },
+    { "id": "admission", "lane": "control", "col": 3, "type": "security", "label": "Admission", "sublabel": "health + policy" },
+    { "id": "execute", "lane": "fleet", "col": 4, "type": "backend", "label": "Execute", "sublabel": "immutable input" },
+    { "id": "accept", "lane": "evidence", "col": 4, "type": "database", "label": "Evidence", "sublabel": "result + checks" },
+    { "id": "publish", "lane": "evidence", "col": 5, "type": "messagebus", "label": "Publish", "sublabel": "accepted result" },
+    { "id": "contract_blocked", "lane": "blocked", "col": 1, "type": "security", "label": "Incomplete", "sublabel": "do not schedule" },
+    { "id": "candidate_blocked", "lane": "blocked", "col": 3, "type": "security", "label": "Gated", "sublabel": "fix or reroute" },
+    { "id": "rework", "lane": "blocked", "col": 5, "type": "messagebus", "label": "Rework", "sublabel": "failed acceptance" }
+  ],
+  "edges": [
+    { "id": "request-contract", "from": "request", "to": "contract", "variant": "emphasis" },
+    { "id": "contract-select", "from": "contract", "to": "select", "route": "bottom-channel" },
+    { "id": "select-admission", "from": "select", "to": "admission" },
+    { "id": "admission-execute", "from": "admission", "to": "execute", "variant": "emphasis" },
+    { "id": "execute-accept", "from": "execute", "to": "accept", "label": "result", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "id": "accept-publish", "from": "accept", "to": "publish", "variant": "emphasis" },
+    { "id": "contract-fail", "from": "contract", "to": "contract_blocked", "label": "incomplete", "variant": "security", "role": "error", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "id": "admission-fail", "from": "admission", "to": "candidate_blocked", "label": "not admitted", "variant": "security", "role": "error", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "id": "accept-fail", "from": "accept", "to": "rework", "label": "failed", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "One declared contract", "items": ["Architecture and resource needs are explicit", "The workload class selects the candidate archetype"] },
+    { "dot": "emerald", "title": "Evidence before publication", "items": ["Execution produces an immutable result", "Acceptance remains separate from deployment"] },
+    { "dot": "rose", "title": "Fail closed", "items": ["Incomplete contracts never schedule", "Unhealthy or incompatible nodes remain gated"] }
+  ]
+}
