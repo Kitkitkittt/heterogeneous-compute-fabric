@@ -6,8 +6,12 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from conftest import parse_json_output
 from test_admission_compute_cli import BASE_CHECKS
+
+from fabric_cli.admission import role_requirements, validate_profile_assignment
+from fabric_cli.probes import _semantic_pass
 
 WORKSTATION_CHECKS = [
     "displays",
@@ -23,6 +27,30 @@ WORKSTATION_CHECKS = [
     "containers",
     "graphics_smoke",
 ]
+
+
+def test_ubuntu26_profile_requires_the_exact_release() -> None:
+    assert _semantic_pass(
+        "os_profile",
+        ('ID=ubuntu\nVERSION_ID="26.04"',),
+        "ubuntu26",
+        "https://github.com/owner/repository/issues/26",
+    )
+    assert not _semantic_pass(
+        "os_profile",
+        ('ID=ubuntu\nVERSION_ID="24.04"',),
+        "ubuntu26",
+        "https://github.com/owner/repository/issues/26",
+    )
+
+
+def test_ubuntu26_is_workstation_only() -> None:
+    assert role_requirements("workstation", "ubuntu26")
+    validate_profile_assignment("dev-01", "workstation", "ubuntu26")
+    with pytest.raises(ValueError, match="OS Profile is not allowed"):
+        role_requirements("compute", "ubuntu26")
+    with pytest.raises(ValueError, match="allowed only for dev-01"):
+        validate_profile_assignment("dev-02", "workstation", "ubuntu26")
 
 
 def _write_dev_observations(path: Path, os_profile: str, include_pop_gate: bool) -> None:

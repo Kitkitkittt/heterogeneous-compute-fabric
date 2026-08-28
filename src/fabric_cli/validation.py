@@ -244,7 +244,7 @@ def _iter_files(root: Path) -> list[Path]:
     paths: list[Path] = []
     for directory, names, files in os.walk(root):
         names[:] = [name for name in names if name not in IGNORED_PARTS]
-        paths.extend(Path(directory) / name for name in files)
+        paths.extend(Path(directory) / name for name in files if name not in IGNORED_PARTS)
     return paths
 
 

@@ -2,7 +2,7 @@
 
 Admission state: `install_pending`
 
-Target OS Profile: `ubuntu24`; `pop24` is an allowed workstation exception.
+Target OS Profile: `ubuntu26`; `ubuntu24` and `pop24` remain allowed workstation profiles.
 
 ## Hardware Assignment
 

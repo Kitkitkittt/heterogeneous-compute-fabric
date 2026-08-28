@@ -48,8 +48,8 @@ nodes:
         values: [Wi-Fi 6E, USB Ethernet]
         evidence: {status: verified, lifetime: chassis, observed_at: 2026-08-27}
     desired_installation:
-      primary_profile: ubuntu24
-      allowed_profiles: [ubuntu24, pop24]
+      primary_profile: ubuntu26
+      allowed_profiles: [ubuntu24, ubuntu26, pop24]
       executor: human
     admission_gates:
       - backup-and-restore-plan-recorded

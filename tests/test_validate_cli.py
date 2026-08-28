@@ -28,6 +28,18 @@ def test_user_can_validate_a_fresh_public_registry(
     }
 
 
+def test_validation_ignores_linked_worktree_git_pointer(
+    tmp_path: Path,
+    run_fabric: Any,
+) -> None:
+    write_valid_registry(tmp_path)
+    (tmp_path / ".git").write_text("gitdir: /private/worktrees/issue\n", encoding="utf-8")
+
+    result = run_fabric("validate", "--root", str(tmp_path), "--format", "json")
+
+    assert result.returncode == 0, result.stdout
+
+
 def test_validation_fails_closed_without_repeating_a_private_pattern(
     tmp_path: Path,
     run_fabric: Any,

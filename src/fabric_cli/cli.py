@@ -73,7 +73,9 @@ def _parser() -> argparse.ArgumentParser:
     admission_report.add_argument(
         "--role-profile", choices=("compute", "workstation"), required=True
     )
-    admission_report.add_argument("--os-profile", choices=("ubuntu24", "pop24"), required=True)
+    admission_report.add_argument(
+        "--os-profile", choices=("ubuntu24", "ubuntu26", "pop24"), required=True
+    )
     admission_report.add_argument("--observations", type=Path, required=True)
     admission_report.add_argument("--replay-ledger", type=Path, required=True)
     admission_report.add_argument("--view", choices=("public", "private"), default="public")
@@ -85,7 +87,9 @@ def _parser() -> argparse.ArgumentParser:
     admission_collect.add_argument(
         "--role-profile", choices=("compute", "workstation"), required=True
     )
-    admission_collect.add_argument("--os-profile", choices=("ubuntu24", "pop24"), required=True)
+    admission_collect.add_argument(
+        "--os-profile", choices=("ubuntu24", "ubuntu26", "pop24"), required=True
+    )
     admission_collect.add_argument(
         "--adapter", choices=("linux-local", "fixture"), default="linux-local"
     )

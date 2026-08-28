@@ -65,7 +65,7 @@ ROLE_PROFILE_REQUIREMENTS: dict[str, dict[str, tuple[str, ...]]] = {
 }
 ALLOWED_OS_PROFILES: dict[str, tuple[str, ...]] = {
     "compute": ("ubuntu24",),
-    "workstation": ("ubuntu24", "pop24"),
+    "workstation": ("ubuntu24", "ubuntu26", "pop24"),
 }
 POP_PROFILE_CHECKS = ("secure_boot_policy", "profile_upgrade_path")
 
@@ -141,6 +141,12 @@ def role_requirements(role_profile: str, os_profile: str) -> dict[str, tuple[str
     return base_roles
 
 
+def validate_profile_assignment(node_id: str, role_profile: str, os_profile: str) -> None:
+    role_requirements(role_profile, os_profile)
+    if os_profile == "ubuntu26" and node_id != "dev-01":
+        raise ValueError("ubuntu26 OS Profile is allowed only for dev-01")
+
+
 def required_checks(role_profile: str, os_profile: str) -> tuple[str, ...]:
     roles = role_requirements(role_profile, os_profile)
     return tuple(
@@ -175,6 +181,7 @@ def generate_admission_report(
     replay_ledger: Path,
     view: ReportView,
 ) -> AdmissionReport:
+    validate_profile_assignment(node_id, role_profile, os_profile)
     document = load_mapping(observations_path, "observations")
     if document.get("schema") != ADMISSION_SCHEMA:
         raise ValueError("observations have an unsupported schema")

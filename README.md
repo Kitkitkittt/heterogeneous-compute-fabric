@@ -10,7 +10,7 @@ The fabric distributes **jobs and artifacts**. It does not combine heterogeneous
 
 | Stable node ID | Purpose | Durable capacity | OS policy | Admission state |
 | --- | --- | --- | --- | --- |
-| `dev-01` | Interactive development and control | Ryzen 7 7840S, 32 GiB, Radeon 780M, 1 TB NVMe | Ubuntu 24.04 LTS; Pop!_OS 24.04 is a supported workstation exception | `install_pending` |
+| `dev-01` | Interactive development and control | Ryzen 7 7840S, 32 GiB, Radeon 780M, 1 TB NVMe | Ubuntu 26.04 LTS; Ubuntu 24.04 LTS and Pop!_OS 24.04 remain supported workstation profiles | `install_pending` |
 | `compute-01` | CPU/RAM builds, CUDA, inference, batch work | Core i5-12400F, 48 GB, RTX 4060 Ti 16 GB, 500 GB SSD + 2 TB disk | Ubuntu 24.04 LTS, headless-first | `install_pending` |
 | `cloud-01` | Bounded ARM64 builds, agents, and auxiliary services | OCI A1 Flex, 4 ARM OCPUs, 24 GB, 50 GB-class boot volume | Existing Linux installation | `verified`, gated |
 | `deploy-01` | Persistent services, databases, staging, and storage | Core i5-6300HQ, 23 GiB visible, GTX 960M 2 GB, NVMe + USB SSD/HDD | Existing Ubuntu installation | `verified`, gated |
@@ -57,7 +57,7 @@ The protocol scales by adding Node Slots and independently mergeable issues—no
 
 1. Human operator completes [issue #3](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/3): reinstall `compute-01` with Ubuntu 24.04 LTS.
 2. An agent completes [issue #4](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/4): verify hardware, private networking/SSH, NVIDIA/CUDA containers, storage, thermals, Git, and an isolated worktree before marking it `schedulable`.
-3. Human operator completes [issue #5](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/5): reinstall `dev-01` with Ubuntu 24.04 LTS, or explicitly select the supported Pop!_OS workstation profile.
+3. Human operator completes [issue #5](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/5): install `dev-01` with the selected Ubuntu 26.04 workstation profile; Ubuntu 24.04 LTS and Pop!_OS 24.04 remain supported alternatives.
 4. An agent completes [issue #6](https://github.com/Kitkitkittt/heterogeneous-compute-fabric/issues/6): verify the DEV workstation acceptance matrix before admission.
 5. Resolve CLOUD cost/ownership/storage gates and DEPLOY ownership/capacity gates before assigning either new work.
 6. Run one bounded Git-to-worker-to-deployment pilot before adding a scheduler or cluster framework.

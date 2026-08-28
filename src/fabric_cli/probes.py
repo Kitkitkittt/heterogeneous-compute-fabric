@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from fabric_cli.admission import required_checks
+from fabric_cli.admission import required_checks, validate_profile_assignment
 from fabric_cli.evidence import (
     ADMISSION_SCHEMA,
     new_admission_provenance,
@@ -355,7 +355,8 @@ def _semantic_pass(
     }
     if check_name == "os_profile":
         expected_id = "pop" if os_profile == "pop24" else "ubuntu"
-        return f"id={expected_id}" in lowered and 'version_id="24.04"' in lowered
+        expected_version = "26.04" if os_profile == "ubuntu26" else "24.04"
+        return f"id={expected_id}" in lowered and f'version_id="{expected_version}"' in lowered
     predicate = predicates.get(check_name)
     return predicate() if predicate is not None else False
 
@@ -369,6 +370,7 @@ def collect_observations(
     source_ref: str,
     issue_verifier: IssueVerifier,
 ) -> dict[str, Any]:
+    validate_profile_assignment(node_id, role_profile, os_profile)
     provenance = new_admission_provenance(adapter.collector_id, source_ref)
     issue_reference = source_issue_reference(source_ref)
     if issue_reference is None:

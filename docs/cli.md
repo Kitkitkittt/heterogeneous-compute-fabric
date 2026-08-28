@@ -55,7 +55,7 @@ On the target Linux installation, collect through the bounded, non-configuring l
 uv run fabric admission collect \
   --node-id compute-01 \
   --role-profile compute \
-  --os-profile ubuntu24 \
+  --os-profile ubuntu26 \
   --probe-cwd /path/to/issue-worktree \
   --probe-config /private/path/probe-config.yaml \
   --source-ref https://github.com/OWNER/REPOSITORY/issues/NUMBER \
@@ -76,7 +76,7 @@ Verification agents collect an observation bundle using the contract in the rein
 uv run fabric admission report `
   --node-id compute-01 `
   --role-profile compute `
-  --os-profile ubuntu24 `
+  --os-profile ubuntu26 `
   --observations PATH_TO_OBSERVATIONS `
   --replay-ledger PATH_TO_PRIVATE_REPLAY_LEDGER `
   --view public

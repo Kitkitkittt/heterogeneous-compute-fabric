@@ -77,7 +77,7 @@ In addition to base verification:
 - editor/toolchain and a short graphics test;
 - Tailscale, SSH, Git, and container smoke tests.
 
-If `pop24` is selected, record it as an explicit profile exception and apply the profile's Secure Boot and upgrade guidance. Do not silently reuse an `ubuntu24` acceptance report.
+If `ubuntu26` is selected, record exact Ubuntu 26.04 evidence; do not reuse `ubuntu24` evidence. If `pop24` is selected, record it as an explicit profile exception and apply the profile's Secure Boot and upgrade guidance.
 
 ## Admission update
 

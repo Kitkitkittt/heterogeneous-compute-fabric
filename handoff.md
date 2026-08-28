@@ -19,8 +19,8 @@ The original exploratory handoff has been superseded by the structured source of
 
 - Stable public identities use `<purpose>-<ordinal>`.
 - `compute-01` and `dev-01` are scheduled for fresh Linux installations by another machine/session.
-- Ubuntu 24.04 LTS is the v1 baseline for both nodes.
-- Pop!_OS 24.04 is a supported workstation exception for `dev-01`.
+- Ubuntu 24.04 LTS remains the v1 baseline for `compute-01`.
+- `dev-01` selects the explicit Ubuntu 26.04 workstation profile; Ubuntu 24.04 LTS and Pop!_OS 24.04 remain supported alternatives.
 - Fedora interoperates with the fabric but is not a supported v1 profile.
 - Existing Linux installations on `cloud-01` and `deploy-01` are not part of this reinstall sequence.
 - Node targeting uses `node:<node-id>` GitHub labels.

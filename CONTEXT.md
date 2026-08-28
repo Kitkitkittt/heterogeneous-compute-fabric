@@ -22,7 +22,7 @@ The disposable operating-system state on a Hardware Assignment. It includes the 
 
 ### OS Profile
 
-A versioned bootstrap and acceptance contract, such as `ubuntu24` or `pop24`. Sharing protocols does not make different profiles operationally identical.
+A versioned bootstrap and acceptance contract, such as `ubuntu24`, `ubuntu26`, or `pop24`. Sharing protocols does not make different profiles operationally identical.
 
 ### Role
 
