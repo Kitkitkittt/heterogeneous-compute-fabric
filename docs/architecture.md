@@ -2,83 +2,71 @@
 
 ## System model
 
-![Conceptual compute fabric](diagrams/current-fabric.svg)
+![Four-node heterogeneous compute fabric architecture](diagrams/current-fabric.svg)
 
-The fabric separates four responsibilities:
+The current fabric separates four responsibilities:
 
-1. a **development/control node** owns interactive work and coordination;
-2. a **compute node** executes bounded CPU, memory, and accelerator workloads;
-3. a **cloud node** supplies architecture-aware remote or elastic capacity;
-4. a **deployment/data node** prioritizes persistent services, data, and recovery.
+1. `dev-01` owns interactive development and coordination;
+2. `compute-01` executes bounded CPU, memory, and CUDA workloads;
+3. `cloud-01` supplies ARM64 remote capacity;
+4. `deploy-01` prioritizes persistent services, data, artifacts, and recovery.
 
-These are [node archetypes](nodes.md), not a public inventory of real machines. A deployment can assign zero, one, or many Node Slots to each archetype.
+The [node specifications](nodes.md) publish planning-safe hardware facts. Hardware assignments remain replaceable; access identities and live operations stay private.
 
 ## Identity layers
 
 ```text
 Node Slot          stable logical identity       <purpose>-<ordinal>
   -> Archetype      public responsibility         development / compute / cloud / deploy
-  -> Hardware       private assignment            physical or virtual capacity
-  -> Installation   disposable state              OS, drivers, tools, configuration
+  -> Hardware       public-safe capacity summary  CPU, memory, accelerator, storage
+  -> Installation   private disposable state      OS, drivers, tools, configuration
   -> Operations     restricted mapping            access, ownership, services, evidence
 ```
 
-Public coordination uses the Node Slot and archetype. Hardware, installation, and operational mappings stay access-controlled.
+Public coordination uses the Node Slot, archetype, and sanitized capacity. Installation and operational mappings stay access-controlled.
 
 ## Control and data flow
 
 A work request declares required capabilities and acceptance criteria. The control function compares that contract with admitted node roles, selects an eligible Node Slot, and records an immutable result.
 
-```text
-work request -> capability match -> admitted node -> immutable result -> review
-                                                                  -> deployment gate
-```
-
 Source control coordinates changes. Artifact storage carries build outputs, reports, datasets, and images. No workflow depends on multiple agents editing one shared writable checkout.
 
 ## Workload routing
 
-![Conceptual workload routing](diagrams/workload-routing.svg)
+![Capability-aware workload routing with fail-closed gates](diagrams/workload-routing.svg)
 
-| Workload class | Preferred archetype | Typical gates |
+| Workload class | Preferred node | Typical gates |
 | --- | --- | --- |
-| Interactive editing and short feedback loops | Development/control | installation health, user-session capacity |
-| CPU or memory-intensive build and test | Compute | architecture, resource budget, bounded execution |
-| Accelerator workload | Compute | accelerator compatibility, runtime verification, thermals |
-| Architecture-specific remote work | Cloud | architecture, cost, ownership, storage, recovery |
-| Persistent service or database | Deployment/data | service owner, capacity, backup, restore, rollback |
-| Artifact retention | Deployment/data or declared storage role | integrity, retention, ownership, restore evidence |
+| Interactive editing and short feedback loops | `dev-01` | installation health, user-session capacity |
+| CPU or memory-intensive build and test | `compute-01` | architecture, resource budget, bounded execution |
+| CUDA workload | `compute-01` | accelerator compatibility, runtime verification, thermals |
+| ARM64 remote work | `cloud-01` | architecture, cost, ownership, storage, recovery |
+| Persistent service or database | `deploy-01` | service owner, capacity, backup, restore, rollback |
+| Artifact retention | `deploy-01` or another declared storage role | integrity, retention, ownership, restore evidence |
 
 Routing fails closed when no candidate satisfies every required capability and gate. Manual selection is sufficient until measured demand proves a scheduler is necessary.
 
 ## Admission lifecycle
 
-```mermaid
-stateDiagram-v2
-    [*] --> inventoried
-    inventoried --> installation_pending: installation authorized
-    installation_pending --> installed: installation recorded
-    installed --> verified: base checks pass
-    verified --> schedulable: role gates pass
-    schedulable --> drained: maintenance or incident
-    schedulable --> retired: assignment removed
-    drained --> verified: remediation verified
-    drained --> retired: assignment removed
-```
+![Fail-closed node admission lifecycle](diagrams/node-admission.svg)
 
-Admission is role-aware. A node can be ready for CPU work while an accelerator role remains gated. Live admission state belongs to the private implementation plane, not this repository.
+Admission is role-aware. A node can be ready for CPU work while an accelerator role remains gated. Live admission evidence belongs to the private implementation plane, not this repository.
 
 ## Public/private boundary
 
 | Public concept plane | Private implementation plane |
 | --- | --- |
-| Node archetypes and logical naming | Real hardware and cloud assignments |
-| Capability and admission concepts | Current admission evidence and state |
+| Node Slots, archetypes, and logical naming | Hostnames, addresses, users, and access paths |
+| Sanitized CPU, memory, GPU, and storage summaries | Current installation details and live utilization |
+| Capability and admission concepts | Current admission evidence and authoritative state |
 | Abstract routing and artifact flow | Scheduler, CLI, automation, and source code |
-| Lifecycle and security principles | Hostnames, addresses, users, services, and access paths |
-| Architecture decisions | Configuration, runbooks, owners, and recovery locations |
+| Lifecycle and security principles | Configuration, services, runbooks, owners, and recovery locations |
 
-Credentials belong in a credential store, not in either repository.
+Credentials and API keys belong in a credential store, not in either repository.
+
+## Evaluation
+
+The published capacity is nominal inventory, not pooled performance. Per-node and end-to-end benchmark/evaluation results are **coming soon**.
 
 ## Scaling
 

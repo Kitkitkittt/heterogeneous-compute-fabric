@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Node Admission Lifecycle",
+    "quality_profile": "showcase",
+    "viewBox": [1080, 640],
+    "views": [
+      { "id": "admission-rail", "label": "Admission rail", "focus": ["inventoried", "pending", "installed", "verified", "schedulable"], "note": "Follow a Node Slot from initial record to role-aware scheduling." },
+      { "id": "maintenance-exits", "label": "Maintenance and exit", "focus": ["schedulable", "drained", "verified", "retired"], "note": "See how maintenance returns through verification or permanently retires the assignment." }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "Admission rail" },
+    { "id": "maintenance", "label": "Maintenance" },
+    { "id": "terminal", "label": "Terminal state" }
+  ],
+  "states": [
+    { "id": "inventoried", "type": "start", "label": "Inventoried", "sublabel": "logical slot recorded", "lane": "main", "col": 0, "step": "01" },
+    { "id": "pending", "type": "waiting", "label": "Installation pending", "sublabel": "human authorization", "lane": "main", "col": 1, "step": "02" },
+    { "id": "installed", "type": "active", "label": "Installed", "sublabel": "new installation recorded", "lane": "main", "col": 2, "step": "03" },
+    { "id": "verified", "type": "decision", "label": "Verified", "sublabel": "base checks passed", "lane": "main", "col": 3, "step": "04" },
+    { "id": "schedulable", "type": "success", "label": "Schedulable", "sublabel": "role gates passed", "lane": "main", "col": 4, "step": "05" },
+    { "id": "drained", "type": "failure", "label": "Drained", "sublabel": "maintenance or incident", "lane": "maintenance", "col": 1, "tag": "recoverable" },
+    { "id": "retired", "type": "neutral", "label": "Retired", "sublabel": "assignment removed", "lane": "terminal", "col": 2, "tag": "terminal" }
+  ],
+  "transitions": [
+    { "id": "inventory-install", "from": "inventoried", "to": "pending" },
+    { "id": "install-complete", "from": "pending", "to": "installed" },
+    { "id": "verify-base", "from": "installed", "to": "verified" },
+    { "id": "admit-role", "from": "verified", "to": "schedulable", "variant": "emphasis", "route": "straight" },
+    { "id": "drain-node", "from": "schedulable", "to": "drained", "variant": "security" },
+    { "id": "reverify", "from": "drained", "to": "verified", "label": "remediation", "variant": "emphasis" },
+    { "id": "retire-live", "from": "schedulable", "to": "retired", "variant": "dashed" },
+    { "id": "retire-drained", "from": "drained", "to": "retired", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Identity survives change", "items": ["The Node Slot remains stable", "Hardware and installation evidence can expire independently"] },
+    { "dot": "emerald", "title": "Role-aware admission", "items": ["Base verification does not imply every role is ready", "Each advertised capability passes its own gates"] },
+    { "dot": "amber", "title": "Controlled maintenance", "items": ["Drained is recoverable through re-verification", "Retired permanently removes the assignment"] }
+  ]
+}
