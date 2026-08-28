@@ -1,4 +1,4 @@
-# ADR-0001: Stable node slots and a private operations overlay
+# ADR-0001: Public concept and private implementation planes
 
 Status: accepted
 
@@ -6,30 +6,30 @@ Date: 2026-08-27
 
 ## Context
 
-Physical machines will be reinstalled and their hardware may be upgraded or replaced. The repository is public, while operational access requires hostnames, addresses, SSH users, owners, recovery locations, and credentials that must not be published.
+The architecture benefits from public review, but implementation and operations require source code, machine assignments, access mappings, evidence, and configuration that should not be published. Hardware and installations also change more often than architectural responsibilities.
 
-Using current hostnames as architecture identifiers couples issues and runbooks to disposable installation state. Publishing all operational mappings would also make a public documentation repository an unnecessary infrastructure-discovery surface.
+Using hostnames or current hardware as public identities couples the architecture to disposable operational state. Publishing a private repository location would also reveal an unnecessary access target without helping readers understand the concept.
 
 ## Decision
 
-1. Identify capacity through stable `<purpose>-<ordinal>` Node Slots such as `dev-01` and `compute-01`.
-2. Treat hardware as a replaceable assignment and the operating system as a disposable installation.
-3. Store sanitized capacity, evidence, roles, and gates in the public registry.
-4. Store current network identities, SSH users, service ownership, recovery locations, and credential references in a separate private operations overlay.
-5. Keep secrets outside both repositories in an approved credential store.
-6. Use issue labels of the form `node:<node-id>` to describe task suitability; a task may target more than one node.
+1. Keep this repository limited to implementation-neutral architecture, node archetypes, diagrams, terminology, and decisions.
+2. Identify conceptual capacity through stable `<purpose>-<ordinal>` Node Slots.
+3. Treat hardware assignments and installations as replaceable private state.
+4. Keep implementation code, automation, inventory, admission evidence, operational mappings, configuration, and runbooks in access-controlled systems.
+5. Do not publish private repository locations or live infrastructure identifiers.
+6. Keep secrets outside source control in an approved credential store.
 
 ## Consequences
 
-- Reinstalling a node does not rename issues, documentation, or workload contracts.
-- Hardware can be swapped while preserving a role-oriented Node Slot.
-- Agents need access to both the public registry and an authorized private overlay to connect to machines.
-- Bootstrap logic must select an explicit OS Profile rather than assuming all Linux distributions are identical.
-- Adding a new purpose creates a new series, for example `storage-01`, `gateway-01`, or `backup-01`.
+- Public discussion can focus on responsibilities, contracts, boundaries, and trade-offs.
+- Reinstalling or replacing a machine does not require public architecture changes.
+- The public repository cannot deploy or operate a fabric by itself.
+- Authorized operators need separate access to implementation and operations data.
+- Examples must remain fictional and must not be updated with live values.
 
 ## Rejected alternatives
 
-- **Hostname as node identity:** rejected because hostnames are disposable and private.
-- **One public file containing every operational detail:** rejected because public capacity documentation does not require live access mappings.
-- **Role-only names without ordinals:** rejected because the fabric is expected to gain multiple nodes with the same purpose.
-
+- **Publish sanitized implementation:** rejected because implementation details still expand the public maintenance and discovery surface.
+- **Use hostnames as node identity:** rejected because hostnames are disposable and operational.
+- **Publish the private repository location:** rejected because it is unnecessary for understanding the public concept.
+- **Keep one public file containing operational detail:** rejected because architecture review does not require live access mappings or evidence.

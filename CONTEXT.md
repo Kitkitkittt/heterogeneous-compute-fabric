@@ -2,77 +2,63 @@
 
 ## Purpose
 
-This repository describes how independently managed machines accept development, compute, cloud, deployment, and storage work through explicit capability and admission contracts.
+This repository defines a public conceptual model for assigning work to independently managed machines through explicit roles, capabilities, and admission gates.
 
 ## Glossary
 
 ### Node Slot
 
-A stable logical identity such as `compute-01`. A Node Slot survives hostname changes, operating-system reinstalls, and hardware replacement. Use this term and ID in public documentation, issues, and task labels.
+A stable logical identity for a capacity role, expressed as `<purpose>-<ordinal>`. A Node Slot survives hostname changes, operating-system reinstalls, and hardware replacement.
 
-Avoid using a hostname as the identity of a node.
+### Node Archetype
+
+A reusable specification of responsibilities, required capabilities, exclusions, and admission criteria. An archetype describes a class of nodes, not a real machine.
 
 ### Hardware Assignment
 
-The physical machine or virtual-machine allocation currently assigned to a Node Slot. Hardware may be swapped without renaming the slot when its purpose remains the same.
+The physical machine or virtual allocation privately assigned to a Node Slot. Hardware can change without renaming the slot when its purpose remains stable.
 
 ### Installation
 
-The disposable operating-system state on a Hardware Assignment. It includes the OS profile, packages, drivers, host keys, Tailscale registration, and local configuration. A reinstall invalidates installation evidence.
-
-### OS Profile
-
-A versioned bootstrap and acceptance contract, such as `ubuntu24` or `pop24`. Sharing protocols does not make different profiles operationally identical.
+The disposable operating-system and software state on a Hardware Assignment. Reinstallation invalidates installation-level evidence.
 
 ### Role
 
-A schedulable capability such as `interactive-development`, `cpu-build`, `cuda`, `arm64-build`, `deployment`, or `storage`. Roles are labels on a Node Slot, not permanent claims about a machine.
-
-### Role Profile
-
-A reusable admission-check bundle such as `compute` or `workstation`. It maps observed checks to Roles but does not identify a Node Slot or an operating system. For example, `compute-02` can reuse the `compute` Role Profile while selecting the `ubuntu24` OS Profile.
+A schedulable capability such as interactive development, CPU build, accelerator compute, cloud execution, deployment, or storage.
 
 ### Admission State
 
-The fail-closed lifecycle of a Node Slot:
+A fail-closed lifecycle for deciding whether a Node Slot can accept work:
 
-`inventoried -> install_pending -> installed -> verified -> schedulable`
+`inventoried -> installation_pending -> installed -> verified -> schedulable`
 
-`drained` and `retired` are terminal operating states. A node may be `verified` but still gated from scheduling.
+A schedulable node may move to `drained` for maintenance or incidents and to `retired` when removed.
 
 ### Admission Gate
 
-A check that must pass before a node or capability can be scheduled. Examples include backup evidence, key-based access, disk health, CUDA container verification, workload ownership, and cost status.
+A condition that must pass before a node or role accepts work. Gates cover compatibility, health, capacity, ownership, security, recovery, and rollback as appropriate.
 
-### Evidence Status
+### Capability Contract
 
-- `verified`: observed directly by an identified audit method.
-- `inherited`: copied from prior documentation and not reverified in the current audit.
-- `unknown`: not safely established.
+The architecture, resources, tools, interfaces, and policy constraints a workload requires and a candidate node declares.
 
-### Evidence Lifetime
+### Immutable Artifact
 
-- `chassis`: remains valid across reinstall, but not a hardware swap.
-- `installation`: invalidated by OS reinstall or material configuration change.
-- `snapshot`: live load, free capacity, services, and similar rapidly stale observations.
+A content-addressed or versioned output that can move between nodes without sharing a writable working directory.
 
-### Public Registry
+### Public Concept Repository
 
-The sanitized, version-controlled node and repository contracts in this repository. It contains logical IDs, durable capacity, evidence state, roles, and gates.
+This repository. It contains architecture, archetypes, diagrams, terminology, and decisions, but no live infrastructure state or implementation.
 
-### Private Operations Overlay
+### Private Implementation Plane
 
-A separately access-controlled mapping from Node Slots to current hostnames, addresses, SSH users, owners, service inventory, recovery locations, and credential references. Secrets themselves stay in a credential store.
-
-### Repository Contract
-
-A machine-readable declaration of a repository's architecture support, capability requirements, eligible nodes, checkout policy, bootstrap command, and verification command.
+Access-controlled systems containing source code, machine assignments, operational mappings, configuration, evidence, and runbooks. Secrets remain in an approved credential store rather than source control.
 
 ## Invariants
 
-- Public Node Slot identity is independent of private network identity.
-- No Node Slot or Role becomes schedulable without directly verified, dated admission evidence and a public-safe source reference.
-- Human-authorized destructive work and agent verification are separate issues.
-- Source moves through Git; outputs move as immutable artifacts.
-- Task suitability may name multiple Node Slots through `node:<node-id>` labels.
-
+- Public logical identity is independent of private network identity.
+- A node accepts work only when its capability contract and admission gates pass.
+- Connectivity does not imply authorization, compatibility, capacity, or readiness.
+- Source moves through version control; outputs move as immutable artifacts.
+- Deployment consumes reviewed, immutable inputs rather than another node's working directory.
+- Public documentation never names private repository locations or live infrastructure identifiers.

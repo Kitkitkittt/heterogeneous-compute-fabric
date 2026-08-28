@@ -1,112 +1,88 @@
-# Architecture and workload routing
+# Architecture
 
-## Identity model
+## System model
+
+![Conceptual compute fabric](diagrams/current-fabric.svg)
+
+The fabric separates four responsibilities:
+
+1. a **development/control node** owns interactive work and coordination;
+2. a **compute node** executes bounded CPU, memory, and accelerator workloads;
+3. a **cloud node** supplies architecture-aware remote or elastic capacity;
+4. a **deployment/data node** prioritizes persistent services, data, and recovery.
+
+These are [node archetypes](nodes.md), not a public inventory of real machines. A deployment can assign zero, one, or many Node Slots to each archetype.
+
+## Identity layers
 
 ```text
-Node Slot          stable public identity       compute-01
-  -> Hardware      replaceable assignment       x86 CPU + NVIDIA GPU
-  -> Installation  disposable operating state  ubuntu24
-  -> Private map   restricted connection data   hostname/user/address
+Node Slot          stable logical identity       <purpose>-<ordinal>
+  -> Archetype      public responsibility         development / compute / cloud / deploy
+  -> Hardware       private assignment            physical or virtual capacity
+  -> Installation   disposable state              OS, drivers, tools, configuration
+  -> Operations     restricted mapping            access, ownership, services, evidence
 ```
 
-The Node Slot is the coordination unit. Hardware and installations can change without forcing issue, label, or runbook renames.
+Public coordination uses the Node Slot and archetype. Hardware, installation, and operational mappings stay access-controlled.
 
-## Four current Node Slots
+## Control and data flow
 
-### `dev-01`
+A work request declares required capabilities and acceptance criteria. The control function compares that contract with admitted node roles, selects an eligible Node Slot, and records an immutable result.
 
-The interactive control and development workstation. Route planning, editing, browser work, Git coordination, and short feedback loops here. Do not assume it has spare memory or use it as a persistent service host without a fresh snapshot gate.
+```text
+work request -> capability match -> admitted node -> immutable result -> review
+                                                                  -> deployment gate
+```
 
-### `compute-01`
+Source control coordinates changes. Artifact storage carries build outputs, reports, datasets, and images. No workflow depends on multiple agents editing one shared writable checkout.
 
-A hybrid worker with three independent capacity lanes:
+## Workload routing
 
-- CPU lane for x86_64 builds, tests, data preparation, and light coding;
-- RAM lane for memory-heavy tooling and larger build/test jobs;
-- CUDA lane for NVIDIA inference, GPU tests, and compatible model workloads.
+![Conceptual workload routing](diagrams/workload-routing.svg)
 
-A task need not use the GPU to be suitable for `compute-01`.
+| Workload class | Preferred archetype | Typical gates |
+| --- | --- | --- |
+| Interactive editing and short feedback loops | Development/control | installation health, user-session capacity |
+| CPU or memory-intensive build and test | Compute | architecture, resource budget, bounded execution |
+| Accelerator workload | Compute | accelerator compatibility, runtime verification, thermals |
+| Architecture-specific remote work | Cloud | architecture, cost, ownership, storage, recovery |
+| Persistent service or database | Deployment/data | service owner, capacity, backup, restore, rollback |
+| Artifact retention | Deployment/data or declared storage role | integrity, retention, ownership, restore evidence |
 
-### `cloud-01`
-
-An ARM64 cloud worker for bounded agents, architecture-compatible builds, and auxiliary services. Treat cost status, workload ownership, storage headroom, and recovery evidence as gates. Cloud allocation is capacity, not proof that a task is free to run.
-
-### `deploy-01`
-
-The persistent service, staging, database, and storage node. Serving continuity has priority over interactive compute. New work requires owner and resource-budget checks.
-
-## Public and private control planes
-
-The public repository contains:
-
-- stable Node Slots and roles;
-- durable hardware capacity with field-level evidence;
-- OS Profile policy and admission gates;
-- repository compatibility contracts;
-- sanitized diagrams and runbooks.
-
-The private operations overlay contains:
-
-- current hostname and private-network identity;
-- SSH user and public-key authorization state;
-- owners, services, recovery locations, and live utilization;
-- credential references, but never raw secrets.
-
-An agent needs the public contract to decide **where** work belongs and authorized private data to decide **how** to connect.
-
-## Linux baseline
-
-`ubuntu24` is the v1 baseline for `dev-01` and `compute-01`. It minimizes bootstrap branches and follows explicit Docker and NVIDIA support paths.
-
-`pop24` is a supported workstation-only exception for `dev-01`. It shares the protocol layer but requires a separate bootstrap and acceptance report. Fedora can interoperate over Tailscale, SSH, Git, and containers, but is experimental for this fabric until it has an owned profile and current vendor-support evidence.
-
-Mixed distributions do not break communication. They increase operational variance in package management, security defaults, driver packaging, upgrades, and troubleshooting.
+Routing fails closed when no candidate satisfies every required capability and gate. Manual selection is sufficient until measured demand proves a scheduler is necessary.
 
 ## Admission lifecycle
 
 ```mermaid
 stateDiagram-v2
     [*] --> inventoried
-    inventoried --> install_pending: reinstall approved
-    install_pending --> installed: human records install evidence
-    installed --> verified: agent passes base checks
-    verified --> schedulable: every role gate passes
+    inventoried --> installation_pending: installation authorized
+    installation_pending --> installed: installation recorded
+    installed --> verified: base checks pass
+    verified --> schedulable: role gates pass
     schedulable --> drained: maintenance or incident
+    schedulable --> retired: assignment removed
     drained --> verified: remediation verified
     drained --> retired: assignment removed
 ```
 
-State is stored in `inventory/nodes.yaml`. GitHub triage labels describe issue readiness; they do not replace node admission state.
+Admission is role-aware. A node can be ready for CPU work while an accelerator role remains gated. Live admission state belongs to the private implementation plane, not this repository.
 
-## Workload routing
+## Public/private boundary
 
-![Workload routing](diagrams/workload-routing.png)
+| Public concept plane | Private implementation plane |
+| --- | --- |
+| Node archetypes and logical naming | Real hardware and cloud assignments |
+| Capability and admission concepts | Current admission evidence and state |
+| Abstract routing and artifact flow | Scheduler, CLI, automation, and source code |
+| Lifecycle and security principles | Hostnames, addresses, users, services, and access paths |
+| Architecture decisions | Configuration, runbooks, owners, and recovery locations |
 
-| Workload | Preferred node | Required gates |
-| --- | --- | --- |
-| Interactive editing and browser work | `dev-01` | workstation profile, free-memory snapshot |
-| x86_64 CPU build or test | `compute-01` | base verification, bounded resource budget |
-| CUDA test or inference | `compute-01` | driver, `nvidia-smi`, host smoke test, GPU-container smoke test |
-| ARM64 build or agent | `cloud-01` | architecture compatibility, cost/owner/storage gates |
-| Persistent service or database | `deploy-01` | service owner, backup/restore, capacity budget, rollback |
-| Immutable artifact storage | declared storage target | owner, integrity, retention, restore evidence |
+Credentials belong in a credential store, not in either repository.
 
-## Source and artifact flow
+## Scaling
 
-```text
-issue -> isolated worktree -> commit -> eligible worker -> immutable result
-      -> review -> deployment issue -> deploy-01 -> health and rollback evidence
-```
-
-- Git coordinates source; do not synchronize live writable trees.
-- Every active writer owns an issue-linked branch and isolated worktree.
-- A repository contract declares architectures and required roles.
-- Deployment consumes a commit or immutable image, not another node's working directory.
-
-## Scaling rules
-
-- Add capacity inside an existing purpose as the next ordinal, for example `compute-02`.
-- Add a new purpose with a new series, for example `storage-01` or `gateway-01`.
-- A GitHub task may carry several `node:<node-id>` labels when multiple nodes are suitable.
-- Keep scheduling manual until one end-to-end pilot exposes a concrete automation problem.
-
+- Add capacity within an archetype by incrementing the ordinal.
+- Add an archetype only when it introduces a distinct responsibility or policy boundary.
+- Permit multiple eligible nodes for a workload; choose using current private evidence.
+- Keep workload granularity above device-level tensor or memory operations unless a homogeneous, measured use case proves otherwise.
