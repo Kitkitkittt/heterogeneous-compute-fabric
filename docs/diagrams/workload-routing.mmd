@@ -1,31 +1,39 @@
 %%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, Segoe UI, sans-serif", "primaryTextColor": "#0f172a", "lineColor": "#475569"}, "flowchart": {"curve": "basis", "nodeSpacing": 40, "rankSpacing": 55}}}%%
 flowchart TB
-    Task["Issue-defined task"] --> Contract{"Repository contract<br/>and role gates pass?"}
-    Contract -- no --> Blocked["Fail closed<br/>needs-info or ready-for-human"]
-    Contract -- yes --> Kind{"Required capability"}
+    accTitle: Conceptual workload routing
+    accDescr: A declared workload selects a matching node archetype, then passes compatibility, admission, capacity, and policy gates before execution. Results are reviewed, while deployment additionally requires immutable release, health, and rollback gates.
 
-    Kind -- interactive --> Dev["dev-01<br/>editor · browser · control"]
-    Kind -- x86 CPU or RAM --> ComputeCPU["compute-01<br/>CPU / RAM lane"]
-    Kind -- CUDA --> ComputeGPU["compute-01<br/>NVIDIA lane"]
-    Kind -- ARM64 --> Cloud["cloud-01<br/>bounded ARM lane"]
-    Kind -- service or data --> Deploy["deploy-01<br/>serving / storage lane"]
+    Task["Work request"] --> Contract{"Capabilities and<br/>acceptance criteria declared?"}
+    Contract -- no --> ContractBlocked["Do not schedule<br/>complete the contract"]
+    Contract -- yes --> Kind{"Required workload class"}
 
-    Dev --> Worktree["Issue-owned isolated worktree"]
-    ComputeCPU --> Worktree
-    ComputeGPU --> Worktree
-    Cloud --> Worktree
-    Worktree --> Result["Commit + immutable result + acceptance evidence"]
-    Result --> Review{"Review and deployment gate"}
-    Review -- deploy --> Deploy
-    Review -- no deploy --> Done["Close issue or select next gate"]
-    Deploy --> Health["Health + rollback evidence"]
+    Kind -- interactive --> Dev["Development / control candidate"]
+    Kind -- CPU, memory, accelerator --> Compute["Compute candidate"]
+    Kind -- remote or architecture-specific --> Cloud["Cloud candidate"]
+    Kind -- service, data, storage --> Deploy["Deployment / data candidate"]
+
+    Dev --> Admission
+    Compute --> Admission
+    Cloud --> Admission
+    Deploy --> Admission
+    Admission{"Selected candidate passes<br/>compatibility, admission,<br/>capacity, and policy?"}
+    Admission -- no --> CandidateBlocked["Do not schedule<br/>select another candidate or satisfy gates"]
+    Admission -- yes --> Execute["Execute from versioned source<br/>or immutable input"]
+    Execute --> Result["Immutable result + evidence"]
+    Result --> Acceptance{"Acceptance criteria pass?"}
+    Acceptance -- no --> Rework["Record failure<br/>revise or retry"]
+    Acceptance -- yes --> Deployment{"Deployment requested?"}
+    Deployment -- no --> Publish["Publish accepted result"]
+    Deployment -- yes --> Release{"Reviewed immutable release,<br/>health, and rollback gates pass?"}
+    Release -- no --> DeployBlocked["Do not deploy<br/>satisfy release gates"]
+    Release -- yes --> DeployAction["Deployment / data role<br/>consumes release input"]
+    DeployAction --> Publish
 
     classDef decision fill:#f8fafc,stroke:#475569,color:#0f172a,stroke-width:2px;
     classDef blocked fill:#fef2f2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px;
     classDef node fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px;
     classDef evidence fill:#ecfdf5,stroke:#059669,color:#064e3b,stroke-width:2px;
-    class Contract,Kind,Review decision;
-    class Blocked blocked;
-    class Dev,ComputeCPU,ComputeGPU,Cloud,Deploy node;
-    class Result,Health,Done evidence;
-
+    class Contract,Kind,Admission,Acceptance,Deployment,Release decision;
+    class ContractBlocked,CandidateBlocked,DeployBlocked,Rework blocked;
+    class Dev,Compute,Cloud,Deploy node;
+    class Execute,Result,DeployAction,Publish evidence;

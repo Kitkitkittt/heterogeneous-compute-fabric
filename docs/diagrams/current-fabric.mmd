@@ -1,36 +1,44 @@
 %%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, Segoe UI, sans-serif", "primaryTextColor": "#0f172a", "lineColor": "#475569"}, "flowchart": {"curve": "basis", "nodeSpacing": 45, "rankSpacing": 65}}}%%
 flowchart TB
-    Human((Human)) --> Issues[(GitHub issues<br/>task + authority)] --> Registry["Public node and repo registries<br/>stable IDs + evidence + gates"]
-    Registry <-. "join by node_id" .-> Private["Private operations overlay<br/>network identity · SSH user · owners<br/>recovery · snapshots · credential refs"]
+    accTitle: Conceptual heterogeneous compute fabric
+    accDescr: A work request enters the development and control node, which selects one eligible node role. Nodes exchange immutable commits and artifacts, and the private implementation plane supplies operational assignments and evidence.
+
+    Request["Work request<br/>capabilities + acceptance criteria"] --> Dev
 
     subgraph Fabric["Heterogeneous compute fabric"]
         direction LR
-        Dev["dev-01<br/>8C / 16T · 32 GiB · Radeon 780M<br/>interactive development<br/>INSTALL PENDING"]
-        Compute["compute-01<br/>6C / 12T · 48 GB · RTX 4060 Ti 16 GB<br/>CPU · RAM · CUDA worker<br/>INSTALL PENDING"]
-        Cloud["cloud-01<br/>4 ARM OCPUs · 24 GB<br/>bounded ARM64 worker<br/>VERIFIED · GATED"]
-        Deploy["deploy-01<br/>4C / 4T · 23 GiB · durable storage<br/>services · data · staging<br/>VERIFIED · GATED"]
+        Dev["dev-N<br/>develop · plan · coordinate"]
+        Match{"Select one eligible<br/>archetype and Node Slot"}
+        Compute["compute-N<br/>CPU · memory · accelerator"]
+        Cloud["cloud-N<br/>remote · elastic · architecture-specific"]
+        Deploy["deploy-N<br/>services · data · staging"]
+        Dev --> Match
+        Match -- interactive --> Dev
+        Match -- bounded compute --> Compute
+        Match -- remote capacity --> Cloud
+        Match -- service or data --> Deploy
     end
 
-    Git[("Git commits<br/>isolated worktrees")]
-    Artifacts[("Immutable artifacts<br/>images · reports · datasets")]
+    Commits[("Immutable commits")]
+    Artifacts[("Immutable artifacts")]
+    Release["Reviewed release input"]
 
-    Registry --> Dev
-    Registry --> Compute
-    Registry --> Cloud
-    Registry --> Deploy
-    Dev <--> Git
-    Compute <--> Git
-    Cloud <--> Git
-    Git --> Artifacts
+    Dev <--> Commits
+    Compute <--> Commits
+    Cloud <--> Commits
+    Dev --> Artifacts
     Compute --> Artifacts
     Cloud --> Artifacts
-    Artifacts --> Deploy
+    Commits --> Release
+    Artifacts --> Release
+    Release --> Deploy
 
-    classDef pending fill:#fff7ed,stroke:#ea580c,color:#7c2d12,stroke-width:2px;
-    classDef gated fill:#fefce8,stroke:#ca8a04,color:#713f12,stroke-width:2px;
+    Private["Private implementation plane<br/>assignments · access · configuration<br/>evidence · automation"]
+    Private -. "implements and operates" .-> Fabric
+
     classDef control fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px;
-    classDef private fill:#f5f3ff,stroke:#7c3aed,color:#4c1d95,stroke-width:2px,stroke-dasharray: 5 4;
-    class Dev,Compute pending;
-    class Cloud,Deploy gated;
-    class Issues,Registry,Git,Artifacts control;
+    classDef node fill:#ecfdf5,stroke:#059669,color:#064e3b,stroke-width:2px;
+    classDef private fill:#f5f3ff,stroke:#7c3aed,color:#4c1d95,stroke-width:2px,stroke-dasharray:5 4;
+    class Request,Match,Commits,Artifacts,Release control;
+    class Dev,Compute,Cloud,Deploy node;
     class Private private;
