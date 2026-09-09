@@ -29,6 +29,10 @@ This repository contains:
 
 Implementation code, live operational state, network identities, access procedures, deployment configuration, credentials, API keys, service inventory, recovery data, and private repository locations are intentionally excluded.
 
+## Portable agent guidance
+
+This concept repository includes portable guidance and structural validation checks, not an operational implementation. Install the complete [distributable skill source](.agents/skills/setup-git-ci-skills/SKILL.md) in a supported agent harness, then invoke `setup-git-ci-skills` explicitly. Run `python3 -m unittest discover -s tests -v` to check document structure; it does not prove runtime isolation or behavioral compliance.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
