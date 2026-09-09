@@ -16,7 +16,7 @@ Using hostnames or current hardware as public identities couples the architectur
 2. Identify capacity through stable `<purpose>-<ordinal>` Node Slots.
 3. Permit public CPU, memory, accelerator, storage, role, and broad admission summaries when they contain no access or live operational data.
 4. Treat hardware assignments and installations as replaceable state rather than logical identity.
-5. Keep implementation code, automation, authoritative inventory, admission evidence, operational mappings, configuration, and runbooks in access-controlled systems.
+5. Keep implementation code, executable automation, authoritative inventory, admission evidence, operational mappings, configuration, and runbooks in access-controlled systems. Public portable prompt guidance and structural checks may describe boundaries without operating the fabric.
 6. Do not publish private repository locations, hostnames, addresses, users, credentials, API keys, services, access paths, recovery data, or live infrastructure identifiers.
 7. Keep secrets outside source control in an approved credential store.
 
