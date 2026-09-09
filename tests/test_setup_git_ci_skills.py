@@ -8,7 +8,8 @@ SKILL_DIR = ROOT / ".agents" / "skills" / "setup-git-ci-skills"
 INITIALIZER = SKILL_DIR / "SKILL.md"
 SEED = SKILL_DIR / "project-skill.md"
 README = ROOT / "README.md"
-DELIVERED = (INITIALIZER, SEED, README)
+ADR = ROOT / "docs" / "adr" / "0001-logical-node-identities-and-public-private-split.md"
+DELIVERED = (INITIALIZER, SEED, README, ADR)
 
 
 def metadata(path):
@@ -33,7 +34,10 @@ class SetupGitCiSkillsTest(unittest.TestCase):
         seed = metadata(SEED)
 
         self.assertEqual(initializer["name"], "setup-git-ci-skills")
-        self.assertTrue(initializer["description"])
+        self.assertEqual(
+            initializer["description"],
+            "Set up or maintain project-local Git and CI guidance.",
+        )
         self.assertEqual(initializer["disable-model-invocation"], "true")
         self.assertEqual(seed["name"], "project-git-ci")
         self.assertRegex(seed["description"], r"^Use when ")
@@ -54,7 +58,7 @@ class SetupGitCiSkillsTest(unittest.TestCase):
                 resolved = path.parent / unquote(parsed.path)
                 self.assertTrue(resolved.exists(), f"broken link in {path}: {target}")
                 links.append((path, target))
-        self.assertIn((README, ".agents/skills/setup-git-ci-skills/SKILL.md"), links)
+        self.assertIn((README, ".agents/skills/setup-git-ci-skills/"), links)
         self.assertIn((INITIALIZER, "./project-skill.md"), links)
 
     def test_delivered_files_have_no_machine_paths_or_credential_urls(self):
@@ -63,27 +67,37 @@ class SetupGitCiSkillsTest(unittest.TestCase):
             self.assertNotRegex(text, r"(?:^|[\s`'(\"])/(?:home|Users|tmp|var|opt)/")
             self.assertNotRegex(text, r"https?://[^\s/@:]+:[^\s/@]+@")
 
-    def test_initializer_structurally_covers_contracts(self):
+    def test_initializer_structurally_covers_workflow(self):
         text = INITIALIZER.read_text(encoding="utf-8").lower()
         required = (
+            "if both exist",
+            "if neither exists",
+            "ask the user which file",
             "complete proposed diff",
-            "explicit approval",
-            "unchanged rerun",
-            "upgrade",
-            "removal",
-            "source recovery",
-            "approved internal jobs",
-            "empty or a capability is unsupported",
-            "concurrent edits",
-            "partial failure",
+            "full diff and base revision",
             "before each write",
+            "head` still equals the approved base revision",
+            "unchanged rerun performs no writes regardless of missing provenance",
+            "before forming an upgrade or removal diff",
+            "multiple unresolved current records stop",
+            "explicit supersedes chain",
+            "repo-relative target path",
+            "full-file sha-256 digest",
+            "exact pointer line and containing heading",
+            "link to the approved diff",
+            "exact post-write provenance tracker comment or update",
+            "tracker publication requires explicit permission",
+            "workflow changes",
+            "previous record it supersedes",
+            "removal, record a tombstone",
+            "tracker update fails",
+            "do not claim success",
+            "writes are individual, not atomic",
             "prompt instructions are neither a deterministic installer nor proof of runtime isolation",
-            "names and matching paths do not prove ownership",
-            "sanitize remote urls",
         )
         self.assertEqual([], [phrase for phrase in required if phrase not in text])
 
-    def test_seed_preserves_unknown_security_and_recovery_gates(self):
+    def test_seed_structurally_covers_policy(self):
         text = SEED.read_text(encoding="utf-8").lower()
         for heading in (
             "ownership and publication",
@@ -97,6 +111,10 @@ class SetupGitCiSkillsTest(unittest.TestCase):
             "safe next gate",
             "secrets",
             "userinfo",
+            "issue-owned branch",
+            "approved internal jobs",
+            "fabric validation alone",
+            "retained backups from live mirrors",
             "do not delete",
         )
         self.assertEqual([], [phrase for phrase in required if phrase not in text])

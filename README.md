@@ -31,7 +31,7 @@ Implementation code, live operational state, network identities, access procedur
 
 ## Portable agent guidance
 
-This concept repository includes portable guidance and structural validation checks, not an operational implementation. Install the complete [distributable skill source](.agents/skills/setup-git-ci-skills/SKILL.md) in a supported agent harness, then invoke `setup-git-ci-skills` explicitly. Run `python3 -m unittest discover -s tests -v` to check document structure; it does not prove runtime isolation or behavioral compliance.
+This repository permits portable prompt guidance and structural validation as public concept material, not operational automation or infrastructure. Install the complete [distributable skill source directory](.agents/skills/setup-git-ci-skills/) in a supported agent harness, then invoke `setup-git-ci-skills` explicitly. Run `python3 -m unittest discover -s tests -v` to check document structure; it does not prove runtime isolation or behavioral compliance.
 
 ## Documentation
 
