@@ -57,7 +57,7 @@ Admission is role-aware. A node can be ready for CPU work while an accelerator r
 | Public concept plane | Private implementation plane |
 | --- | --- |
 | Node Slots, archetypes, and logical naming | Hostnames, addresses, users, and access paths |
-| Sanitized CPU, memory, GPU, and storage summaries | Current installation details and live utilization |
+| Sanitized CPU, memory, GPU, storage, and historical aggregate activity summaries | Current installation details and live utilization |
 | Capability and admission concepts | Current admission evidence and authoritative state |
 | Abstract routing and artifact flow | Scheduler, CLI, automation, and source code |
 | Lifecycle and security principles | Configuration, services, runbooks, owners, and recovery locations |
@@ -66,7 +66,7 @@ Credentials and API keys belong in a credential store, not in either repository.
 
 ## Evaluation
 
-The published capacity is nominal inventory, not pooled performance. Per-node and end-to-end benchmark/evaluation results are **coming soon**.
+The published capacity is nominal inventory with documentation evidence dated **2026-08-28**, not a fresh hardware verification or pooled performance. The [measurement coverage table](../README.md#measurement-coverage) links the available [sanitized historical workflow activity dataset](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/diagrams/activity-snapshot.json) and [historical execution case study](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/SOURCES.md#3-what-we-verified-ourselves-and-what-we-did-not). Workflow conclusions do not establish execution placement or utilization, and historical timing samples do not establish improvement. Hardware and comparable end-to-end benchmarks remain unmeasured; live utilization and admission evidence stay in the private implementation plane.
 
 ## Scaling
 

@@ -2,6 +2,8 @@
 
 These specifications combine reusable node archetypes with public-safe hardware summaries for the current assignments. Hostnames, addresses, users, credentials, API keys, services, access paths, live utilization, and recovery data remain private.
 
+**Inventory documentation evidence: 2026-08-28.** The hardware summaries were last updated in the capacity-documentation change dated 2026-08-28 in this repository's history. They are inherited nominal specifications, not a fresh hardware audit, benchmark, or proof of current admission.
+
 ## `dev-01` — Development/control
 
 | Resource | Public specification |
@@ -127,4 +129,4 @@ A physical or virtual machine may satisfy more than one archetype, but each role
 
 ## Evaluation status
 
-Hardware totals are nominal inventory. Comparable CPU, memory, storage, GPU, thermal, network, and end-to-end workload benchmarks are **coming soon**.
+The [measurement coverage table](../README.md#measurement-coverage) separates documented nominal inventory from [sanitized historical workflow activity](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/diagrams/activity-snapshot.json) and a [historical execution case study](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/SOURCES.md#3-what-we-verified-ourselves-and-what-we-did-not). These sources do not prove current node admission, utilization, or execution placement. Hardware and comparable end-to-end benchmarks remain unmeasured; live utilization and admission evidence remain private.

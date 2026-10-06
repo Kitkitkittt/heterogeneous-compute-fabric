@@ -16,7 +16,19 @@ The fabric distributes **jobs and immutable artifacts**. It does not merge machi
 | Raw storage | ~9.56 TB | NVMe, SSD, HDD, USB, and cloud boot storage before formatting, redundancy, and reservations |
 | GPU capability | RTX 4060 Ti + GTX 960M + Radeon 780M | CUDA and integrated-graphics capabilities are separate scheduling lanes |
 
-**Benchmark and evaluation: coming soon.** Planned measurements include per-node CPU, memory, storage, accelerator, thermal, network, and end-to-end workload results. The nominal totals above describe inventory, not guaranteed simultaneous or pooled performance.
+Inventory documentation evidence is dated **2026-08-28**, from the capacity-summary update in this repository's history. This is a documentation date, not a new hardware verification. The totals are nominal inventory, not guaranteed simultaneous or pooled performance.
+
+## Measurement coverage
+
+| Evidence category | Coverage | Boundary |
+| --- | --- | --- |
+| Nominal hardware inventory | [Documented node specifications](docs/nodes.md), documentation evidence dated 2026-08-28 | Planning capacity only; no new hardware verification or pooled-performance claim |
+| Historical workflow activity | [Sanitized activity dataset](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/diagrams/activity-snapshot.json) available | Bounded aggregates with sample conditions and provenance; not execution placement, throughput, or utilization evidence |
+| Historical execution case study | [Published observations and limitations](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/SOURCES.md#3-what-we-verified-ourselves-and-what-we-did-not) available | Historical single-observation samples, not a controlled benchmark or evidence of improvement |
+| Hardware and end-to-end benchmarks | Unmeasured | No comparable per-node CPU, memory, storage, GPU, thermal, network, or end-to-end performance results published |
+| Live utilization and admission | Private | Current availability, free capacity, and role admission require private evidence |
+
+The activity metric is **success fraction among success/failure workflow conclusions**. It does not establish where execution occurred or whether this fabric supplied capacity. Historical timing observations retain their original conditions; neither workflow activity nor the case study establishes a performance improvement.
 
 ## Public scope
 
@@ -25,6 +37,7 @@ This repository contains:
 - architectural principles and boundaries;
 - public-safe node hardware summaries and role specifications;
 - capability-aware workload-routing and lifecycle diagrams;
+- references to sanitized historical activity aggregates and an execution case study;
 - shared terminology and architecture decisions.
 
 Implementation code, live operational state, network identities, access procedures, deployment configuration, credentials, API keys, service inventory, recovery data, and private repository locations are intentionally excluded.
