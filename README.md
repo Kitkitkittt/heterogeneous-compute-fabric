@@ -4,7 +4,7 @@ A public reference architecture for coordinating heterogeneous development, acce
 
 The fabric distributes **jobs and immutable artifacts**. It does not merge machines into one virtual computer or split one workload across incompatible devices by default.
 
-![Heterogeneous compute fabric with four public-safe node specifications](docs/diagrams/current-fabric.svg)
+![Heterogeneous compute fabric architecture](docs/diagrams/current-fabric.svg)
 
 ## Nominal fleet capacity
 
@@ -17,6 +17,8 @@ The fabric distributes **jobs and immutable artifacts**. It does not merge machi
 | GPU capability | RTX 4060 Ti + GTX 960M + Radeon 780M | CUDA and integrated-graphics capabilities are separate scheduling lanes |
 
 Inventory documentation evidence is dated **2026-08-28**, from the capacity-summary update in this repository's history. This is a documentation date, not a new hardware verification. The totals are nominal inventory, not guaranteed simultaneous or pooled performance.
+
+The totals above count the four originally documented specification rows. Additional `cloud-*` ordinals carry their own dated, sanitized capacity summaries in [the node specifications](docs/nodes.md); they are inventoried, not admitted, and are excluded from these totals until each one is separately verified.
 
 ## Measurement coverage
 

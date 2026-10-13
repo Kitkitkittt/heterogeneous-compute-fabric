@@ -2,13 +2,16 @@
 
 ## System model
 
-![Four-node heterogeneous compute fabric architecture](diagrams/current-fabric.svg)
+![Heterogeneous compute fabric architecture](diagrams/current-fabric.svg)
 
-The current fabric separates four responsibilities:
+The diagram draws one representative `cloud-*` ordinal; the archetype's other ordinals are documented in [node specifications](nodes.md) but share the same routing gates.
+
+The current fabric separates four archetypes:
 
 1. `dev-01` owns interactive development and coordination;
 2. `compute-01` executes bounded CPU, memory, and CUDA workloads;
-3. `cloud-01` supplies ARM64 remote capacity;
+3. the `cloud-*` ordinals supply ARM64 remote capacity, admitted per ordinal
+   because their sizes differ;
 4. `deploy-01` prioritizes persistent services, data, artifacts, and recovery.
 
 The [node specifications](nodes.md) publish planning-safe hardware facts. Hardware assignments remain replaceable; access identities and live operations stay private.
@@ -40,7 +43,8 @@ Source control coordinates changes. Artifact storage carries build outputs, repo
 | Interactive editing and short feedback loops | `dev-01` | installation health, user-session capacity |
 | CPU or memory-intensive build and test | `compute-01` | architecture, resource budget, bounded execution |
 | CUDA workload | `compute-01` | accelerator compatibility, runtime verification, thermals |
-| ARM64 remote work | `cloud-01` | architecture, cost, ownership, storage, recovery |
+| ARM64 remote work | an admitted `cloud-*` ordinal sized for the job | architecture, memory ceiling, cost, ownership, storage, recovery |
+| ARM64 image build or other memory-heavy work | a build-sized `cloud-*` ordinal | memory ceiling is a gate, not a preference |
 | Persistent service or database | `deploy-01` | service owner, capacity, backup, restore, rollback |
 | Artifact retention | `deploy-01` or another declared storage role | integrity, retention, ownership, restore evidence |
 
