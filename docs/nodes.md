@@ -2,7 +2,7 @@
 
 These specifications combine reusable node archetypes with public-safe hardware summaries for the current assignments. Hostnames, addresses, users, credentials, API keys, services, access paths, live utilization, and recovery data remain private.
 
-**Inventory documentation evidence: 2026-08-28.** The hardware summaries were last updated in the capacity-documentation change dated 2026-08-28 in this repository's history. They are inherited nominal specifications, not a fresh hardware audit, benchmark, or proof of current admission.
+**Inventory documentation evidence:** The original `dev-01`, `compute-01`, `cloud-01`, and `deploy-01` hardware summaries inherit the capacity-documentation change dated **2026-08-28** in this repository's history. The additional cloud ordinals carry their own evidence dates below: **2026-09-26** for `cloud-02` and **2026-10-13** for `cloud-03`. These are nominal inventory summaries, not a fresh hardware audit, benchmark, or proof of current admission.
 
 ## `dev-01` — Development/control
 
@@ -92,6 +92,77 @@ These specifications combine reusable node archetypes with public-safe hardware 
 - private cost, ownership, quota, storage, and recovery gates pass;
 - credentials are externally managed and least-privileged;
 - teardown and data-retention behavior are defined.
+
+### `cloud-02` — Cloud (ARM64, low-memory class)
+
+| Resource | Public specification |
+| --- | --- |
+| CPU | ARM64 single-board class, cores not declared |
+| Memory | ~1 GiB visible |
+| Accelerator | None declared |
+| Storage | Not declared |
+| Primary role | Light bounded agents and thin controller work |
+
+**Inventory documentation evidence: 2026-09-26.** Sanitized capacity only; this
+is an inventory summary, not a hardware audit or an admission claim.
+
+**Responsibilities**
+
+- architecture-compatible, bounded work that fits the declared memory ceiling;
+- thin control or coordination roles whose heavy work runs elsewhere.
+
+**Exclusions**
+
+- memory-heavy builds, image builds, and anything that needs a container
+  runtime unless a role is explicitly admitted for it;
+- long-running or resource-saturating work.
+
+**Admission criteria**
+
+- the declared memory ceiling is respected by the assigned role;
+- architecture and repository compatibility pass;
+- private cost, ownership, storage, and recovery gates pass.
+
+### `cloud-03` — Cloud (ARM64, build-sized class)
+
+| Resource | Public specification |
+| --- | --- |
+| CPU | ARM64 KVM virtual machine, core count not verified |
+| Memory | ~24 GiB visible |
+| Accelerator | None declared |
+| Storage | ~200 GiB |
+| Primary role | ARM64 builds, bounded agents, and auxiliary workloads |
+
+**Inventory documentation evidence: 2026-10-13.** Sanitized capacity only; this
+is an inventory summary, not a hardware audit or an admission claim.
+
+**Responsibilities**
+
+- architecture-compatible builds, tests, and bounded agents;
+- capacity for workloads that fit the declared cost and data policy;
+- auxiliary workloads with explicit ownership and recovery requirements.
+
+**Exclusions**
+
+- assuming a new installation proves performance, availability, or readiness;
+- provider-specific identity in public coordination;
+- workloads without an owner, budget, or recovery plan.
+
+**Admission criteria**
+
+- architecture and repository compatibility pass;
+- private cost, ownership, quota, storage, and recovery gates pass;
+- credentials are externally managed and least-privileged;
+- teardown and data-retention behavior are defined.
+
+### Cloud archetype composition
+
+The cloud archetype is not a single machine. Ordinals are admitted
+independently and are not interchangeable: a low-memory ordinal and a
+build-sized ordinal serve different bounded work, and routing a workload to the
+wrong one is a capability mismatch rather than a capacity preference. A
+sanitized capacity summary publishes planning facts only; current admission
+state for every ordinal lives in the private implementation plane.
 
 ## `deploy-01` — Deployment/data
 
