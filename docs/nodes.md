@@ -2,7 +2,7 @@
 
 These specifications combine reusable node archetypes with public-safe hardware summaries for the current assignments. Hostnames, addresses, users, credentials, API keys, services, access paths, live utilization, and recovery data remain private.
 
-**Inventory documentation evidence: 2026-08-28.** The hardware summaries were last updated in the capacity-documentation change dated 2026-08-28 in this repository's history. They are inherited nominal specifications, not a fresh hardware audit, benchmark, or proof of current admission.
+**Inventory documentation evidence:** The original `dev-01`, `compute-01`, `cloud-01`, and `deploy-01` hardware summaries inherit the capacity-documentation change dated **2026-08-28** in this repository's history. The additional cloud ordinals carry their own evidence dates below: **2026-09-26** for `cloud-02` and **2026-10-13** for `cloud-03`. These are nominal inventory summaries, not a fresh hardware audit, benchmark, or proof of current admission.
 
 ## `dev-01` — Development/control
 

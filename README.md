@@ -16,7 +16,7 @@ The fabric distributes **jobs and immutable artifacts**. It does not merge machi
 | Raw storage | ~9.56 TB | NVMe, SSD, HDD, USB, and cloud boot storage before formatting, redundancy, and reservations |
 | GPU capability | RTX 4060 Ti + GTX 960M + Radeon 780M | CUDA and integrated-graphics capabilities are separate scheduling lanes |
 
-Inventory documentation evidence is dated **2026-08-28**, from the capacity-summary update in this repository's history. This is a documentation date, not a new hardware verification. The totals are nominal inventory, not guaranteed simultaneous or pooled performance.
+Inventory documentation evidence for the four originally documented specification rows is dated **2026-08-28**, from the capacity-summary update in this repository's history; additional `cloud-*` ordinals carry their own dates below. These are documentation dates, not new hardware verification. The totals are nominal inventory, not guaranteed simultaneous or pooled performance.
 
 The totals above count the four originally documented specification rows. Additional `cloud-*` ordinals carry their own dated, sanitized capacity summaries in [the node specifications](docs/nodes.md); they are inventoried, not admitted, and are excluded from these totals until each one is separately verified.
 
@@ -24,7 +24,7 @@ The totals above count the four originally documented specification rows. Additi
 
 | Evidence category | Coverage | Boundary |
 | --- | --- | --- |
-| Nominal hardware inventory | [Documented node specifications](docs/nodes.md), documentation evidence dated 2026-08-28 | Planning capacity only; no new hardware verification or pooled-performance claim |
+| Nominal hardware inventory | [Documented node specifications](docs/nodes.md): original rows dated 2026-08-28; `cloud-02` dated 2026-09-26; `cloud-03` dated 2026-10-13 | Planning capacity only; no new hardware verification or pooled-performance claim |
 | Historical workflow activity | [Sanitized activity dataset](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/diagrams/activity-snapshot.json) available | Bounded aggregates with sample conditions and provenance; not execution placement, throughput, or utilization evidence |
 | Historical execution case study | [Published observations and limitations](https://github.com/Kitkitkittt/ci-capacity-patterns/blob/main/docs/SOURCES.md#3-what-we-verified-ourselves-and-what-we-did-not) available | Historical single-observation samples, not a controlled benchmark or evidence of improvement |
 | Hardware and end-to-end benchmarks | Unmeasured | No comparable per-node CPU, memory, storage, GPU, thermal, network, or end-to-end performance results published |
