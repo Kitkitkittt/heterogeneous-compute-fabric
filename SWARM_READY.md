@@ -21,7 +21,7 @@ If a `swarm-ready` skill is installed, load it. Otherwise execute the documented
 
 ## Repository starting point
 
-Read: [README.md](README.md), [CONTEXT.md](CONTEXT.md), [docs](docs), [tests](tests).
+Read the [public scope](README.md#public-scope), [domain language](CONTEXT.md), [architecture](docs/architecture.md), and [public/private boundary decision](docs/adr/0001-logical-node-identities-and-public-private-split.md).
 
 Keep this repository a public reference architecture and sanitized evidence source; private operations and live admission remain in their existing control plane.
 
@@ -41,7 +41,16 @@ The base above is an inspection snapshot, not a permanent working branch. Refres
 
 ## Verification starting point
 
-No executable acceptance command was established by this bounded source inspection. Read `README.md`, `tests` and record the narrowest existing check before implementation. Do not invent a `test` command or infer that the repository has no tests from this gap. For a documentation-only task, check links, factual source anchors and whitespace; do not build unrelated application code.
+**Public documentation only:** review the changed links and confirm the diff contains only public-safe information. From the repository root, check the tracked entry paths and the uncommitted docs patch:
+
+```sh
+git --no-lazy-fetch ls-files --error-unmatch -- README.md SWARM_READY.md CONTEXT.md docs/architecture.md docs/adr/0001-logical-node-identities-and-public-private-split.md .agents/skills/setup-git-ci-skills/SKILL.md .agents/skills/setup-git-ci-skills/project-skill.md tests/test_setup_git_ci_skills.py &&
+  git --no-lazy-fetch diff --check HEAD -- README.md SWARM_READY.md
+```
+
+For a committed patch, compare its review base and candidate SHA with `git diff --check`. These local Git checks do not install skills, render diagrams, call providers, or exercise placement or admission.
+
+**Portable skill guidance:** the [initializer](.agents/skills/setup-git-ci-skills/SKILL.md) and [seed](.agents/skills/setup-git-ci-skills/project-skill.md) are source, not installed commands. The README's separate Python check in a full checkout runs [the structural suite](tests/test_setup_git_ci_skills.py) for frontmatter, local links, and public-safety wording. It does not operate the fabric or qualify runtime readiness.
 
 ## Required handoff result
 
