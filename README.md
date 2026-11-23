@@ -46,6 +46,8 @@ Implementation code, live operational state, network identities, access procedur
 
 ## Portable agent guidance
 
+For a bounded public documentation task, start with the [swarm-ready handoff](SWARM_READY.md). It covers source review, not skill installation, workload placement, or live admission.
+
 This repository permits portable prompt guidance and structural validation as public concept material, not operational automation or infrastructure. Install the complete [distributable skill source directory](.agents/skills/setup-git-ci-skills/) in a supported agent harness, then invoke `setup-git-ci-skills` explicitly. Run `python3 -m unittest discover -s tests -v` to check document structure; it does not prove runtime isolation or behavioral compliance.
 
 ## Documentation
